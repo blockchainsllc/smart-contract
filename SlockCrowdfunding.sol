@@ -33,7 +33,7 @@ contract SlockCrowdfunding {
             return;
         }
 
-        // if there is still money left after 2 month, let Slock be able to transfer it (we could remove that)
+        // if there is still money left after one year, let Slock be able to transfer it (we could remove that)
         if ((sender == 0xourAccount) && !totalWeiRecevied && time > closingTime + year){
             sender.send(this.balance);
         }
