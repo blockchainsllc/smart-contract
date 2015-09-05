@@ -52,7 +52,7 @@ contract SlockCrowdfunding {
     }
 
     mapping (address => uint) distro;  // value is amount of wei given to crowdfunding
-    const uint totalWeiReceived;
+    uint totalWeiReceived;
     mapping (address => uint) payedOut;
     uint withdrawn;
     uint closingTime;
