@@ -15,9 +15,7 @@ contract SlockCrowdfunding {
 
     // contribute to crowdfunding (fallback function, called when no other function is called, no data given in transaction)
     function(){
-        if (block.timestamp <= closingTime){
-            distro[msg.sender] += msg.value;
-        }
+        if (block.timestamp <= closingTime) distro[msg.sender] += msg.value;
     }
 
     // the purpose of this function is the either send all the money to Slock, or in the case the minimal goal was not reached, give back the money to the supporters
@@ -60,8 +58,8 @@ contract SlockCrowdfunding {
 		    distro[msg.sender] -= _share;
 		    distro[_to] += _share;
 		    return true;
-	    }
-	    return false;
+	}
+	return false;
     }
 }
 
