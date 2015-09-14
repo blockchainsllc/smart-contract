@@ -56,7 +56,7 @@ contract SlockCrowdfunding {
 	address sender = msg.sender;
 	uint fullshare = distro[msg.sender];
 	if (_share <= fullshare){
-	    distro[msg.sender] -= _share;
+		distro[msg.sender] -= _share;
 		distro[_to] += _share;
 		payedOut[_to] += payedOut[msg.sender] * _share / fullshare;
 		payedOut[msg.sender] -= payedOut[msg.sender] * _share / fullshare;
