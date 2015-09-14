@@ -2,7 +2,7 @@ contract SlockCrowdfunding {
     
     mapping (address => uint) distro;   // value is amount of wei given to crowdfunding
     mapping (address => uint) payedOut; // value is amount already payed out to supporter
-    uint totalWeiReceived;              // total number of wei received in successful crowdfunding, only non-zero after pay out to Slock
+    uint totalWeiReceived;              // total number of wei received in successful crowdfunding, only non-zero after pay out to Slock (sum of all distro[...] )
     uint withdrawn;                     // total amount of wei already withdrawn through supportes (sum of all payedOut[...] )
     uint closingTime;                   // end of crowdfunding
     uint minValue;                      // minimal goal of crowdfunding
@@ -54,10 +54,13 @@ contract SlockCrowdfunding {
     // transfer (part of) your contribution to another address
     function transferShare(address _to, uint _share) external returns (bool success) {
 	address sender = msg.sender;
-	if (_share <= distro[msg.sender]){
-		    distro[msg.sender] -= _share;
-		    distro[_to] += _share;
-		    return true;
+	uint fullshare = distro[msg.sender];
+	if (_share <= fullshare){
+	    distro[msg.sender] -= _share;
+		distro[_to] += _share;
+		payedOut[_to] += payedOut[msg.sender] * _share / fullshare;
+		payedOut[msg.sender] -= payedOut[msg.sender] * _share / fullshare;
+		return true;
 	}
 	return false;
     }
