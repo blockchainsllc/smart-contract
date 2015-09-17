@@ -151,15 +151,17 @@ contract Etherlock is subUser  {
     }
     
     function closedByOwner() {
-        if (msg.sender != owner){
-            return;
-        }
-        uint cost = price * (block.timestamp - openTime);
+        if (msg.sender != owner) return;
         if (costs() > deposit){
             owner.send(deposit);
             isOpen = 0;
             user = owner;
         }
+    }
+
+    function changeOwner(address _newOwner) {
+        if (msg.sender != owner) return;
+        owner = _newOwner;
     }
 
     address owner;
