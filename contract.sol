@@ -164,6 +164,14 @@ contract Etherlock is subUser  {
         owner = _newOwner;
     }
 
+    function isUser(address _address) returns (bool) {
+        return _address == user;
+    }
+
+    function isOwner(address _address) returns (bool) {
+        return _address == owner;
+    }
+
     address owner;
     uint deposit;
     uint price;
