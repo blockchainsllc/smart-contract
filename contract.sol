@@ -49,8 +49,16 @@
         reorganizeSubUsers(); //make sure m_numsubUser is equal to the number of subUsers and always points to the optimal free slot
         subUserRemoved(_subUser);
     }
+    function removeAllSubUsers() internal {
+        for (var i = 1; i <= m_numSubUsers; i++)
+        {
+            m_subUserIndex[m_subUsers[i]] = 0;
+        }
+        delete m_subUsers;
+        m_numSubUsers = 0;
+    }
 
-    function reorganizeSubUsers() private returns (bool) {
+    function reorganizeSubUsers() private {
         uint free = 1;
         while (free < m_numSubUsers)
         {
@@ -65,7 +73,7 @@
         }
     }
 
-    address user;
+    address public user;
 
     // pointer used to find a free slot in m_subUsers
     uint public m_numSubUsers;
@@ -145,6 +153,7 @@ contract Etherlock is subUser  {
                 owner.send(cost);
             }
             isOpen = 0;
+            removeAllSubUsers();
             user = owner;
             Close();
         }
@@ -164,20 +173,12 @@ contract Etherlock is subUser  {
         owner = _newOwner;
     }
 
-    function isUser(address _address) returns (bool) {
-        return _address == user;
-    }
+    address public owner;
+    uint public deposit;
+    uint public price;
 
-    function isOwner(address _address) returns (bool) {
-        return _address == owner;
-    }
-
-    address owner;
-    uint deposit;
-    uint price;
-
-    uint isOpen;
-    uint openTime;
-    uint closeTime;
-    uint timeBlock;
+    uint public isOpen;
+    uint public openTime;
+    uint public closeTime;
+    uint public timeBlock;
 }
