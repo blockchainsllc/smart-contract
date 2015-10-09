@@ -54,17 +54,23 @@ contract SlockCrowdfunding {
     }
 
     // transfer (part of) your contribution to another address
-    function transferShare(address _to, uint _share) external returns (bool success) {
-	address sender = msg.sender;
-	uint fullshare = distro[msg.sender];
-	if (_share <= fullshare){
-		distro[msg.sender] -= _share;
-		distro[_to] += _share;
-		payedOut[_to] += payedOut[msg.sender] * _share / fullshare;
-		payedOut[msg.sender] -= payedOut[msg.sender] * _share / fullshare;
-		return true;
-	}
+    function transfer(uint _value, address _to) external returns (bool _success)
+    {
+        address sender = msg.sender;
+	    uint fullshare = distro[msg.sender];
+	    if (_value <= fullshare){
+		    distro[msg.sender] -= _value;
+		    distro[_to] += _value;
+		    payedOut[_to] += payedOut[msg.sender] * _value / fullshare;
+		    payedOut[msg.sender] -= payedOut[msg.sender] * _value / fullshare;
+		    return true;
+	    }
 	return false;
+    }
+
+    function balanceOf(address _addr) constant returns (uint _r)
+    {
+        return distro[_addr];
     }
 }
 
