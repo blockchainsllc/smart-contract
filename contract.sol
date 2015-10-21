@@ -144,13 +144,16 @@ contract Etherlock is subUser  {
         if (isOpen == 0) return;
         if (msg.sender == owner && user == owner) {isOpen = 0; Close(); return;}
         if (msg.sender == user){
+            address crowdfunder = 0xff; //to be replaced by the crowdfunding address
             uint cost = costs();
             if (cost > deposit){
-                owner.send(deposit);
+                crowdfunder.send(deposit / 100);
+                owner.send(deposit - deposit / 100 );
             }
             else{
                 user.send(deposit - cost);
-                owner.send(cost);
+                crowdfunder.send(cost / 100);
+                owner.send(cost - cost / 100 );
             }
             isOpen = 0;
             removeAllSubUsers();
@@ -162,7 +165,9 @@ contract Etherlock is subUser  {
     function closedByOwner() {
         if (msg.sender != owner) return;
         if (costs() > deposit){
-            owner.send(deposit);
+            address crowdfunder = 0xff; //to be replaced by the crowdfunding address
+            crowdfunder.send(deposit / 100);
+            owner.send(deposit - deposit / 100 );
             isOpen = 0;
             user = owner;
         }
