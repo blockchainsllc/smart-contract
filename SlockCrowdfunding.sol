@@ -38,7 +38,7 @@ contract SlockCrowdfunding
     }
 
     // after the crowdfunding is over, this function can be called to get the portion of the fees (which will be paid to this account) according to the contribution made
-    function getMyShare()
+    function receiveDividends()
     {
         address sender = msg.sender;
         // as long as totalWeiReceived is zero (prior to finalize), myShare will always be zero since x / 0 = 0 in the EVM.
@@ -55,7 +55,7 @@ contract SlockCrowdfunding
     // transfer (part of) your contribution to another address
     function transfer(uint _value, address _to) external returns (bool _success)
     {
-        getMyShare();
+        receiveDividends();
         address sender = msg.sender;
 	    uint myShares = distro[msg.sender];
 	    if (_value <= myShares){
