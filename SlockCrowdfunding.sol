@@ -1,4 +1,5 @@
-contract SlockCrowdfunding {
+contract SlockCrowdfunding
+{
     
     mapping (address => uint) distro;   // value is amount of wei given to crowdfunding
     mapping (address => uint) payedOut; // value is amount already payed out to supporter
@@ -13,43 +14,42 @@ contract SlockCrowdfunding {
         closingTime = _closingTime;
     }
 
-    // contribute to crowdfunding (fallback function, called when no other function is called, no data given in transaction)
-    function(){
-        if (block.timestamp <= closingTime) distro[msg.sender] += msg.value;
-        else if (msg.sender.send(msg.value)) return;
-        else uint[] memory x; x[0]; // throws exception and reverts the transaction
+    // contribute to crowdfunding (fallback function, called when no other function is called, no data given in transaction). It is also called when receiving money from the slock smart contract
+    function()
+    {
+        if (now <= closingTime) distro[msg.sender] += msg.value;
     }
 
-    // the purpose of this function is the either send all the money to Slock, or in the case the minimal goal was not reached, give back the money to the supporters
-    function finalize() external{
-        // if called before the end of the crowdfunding, do nothing
-        if (block.timestamp < closingTime) return;
+    // in the case the minimal goal was not reached, give back the money to the supporters
+    function refund() external
+    {
+         if (now > closingTime && this.balance < minValue && totalWeiReceived == 0 || payedOut[msg.sender] == 0 )
+         {
+             if (msg.sender.send(distro[msg.sender])) payedOut[msg.sender] = 1;
+         }
+    }
 
-        address sender = msg.sender;
-
-        // minimal goal was not reached, give back the money to the supporter
-        if (this.balance < minValue && totalWeiReceived == 0 && payedOut[sender] == 0){
-            if (sender.send(distro[sender])) payedOut[sender] = 1;
-            return;
-        }
-
-        // successfull crowdfunding - payout Slock
-        if (sender == 0x510c && totalWeiReceived == 0 && this.balance >= minValue){
-            totalWeiReceived = this.balance;
-            sender.send(totalWeiReceived);
-            return;
+    //the purpose of this function is to send all the money to Slock GmbH,
+    function finalize() external
+    {
+        if (now > closingTime && msg.sender == 0x510c && totalWeiReceived == 0 && this.balance >= minValue)
+        {
+            if (msg.sender.send(totalWeiReceived)) totalWeiReceived = this.balance;
         }
     }
 
     // after the crowdfunding is over, this function can be called to get the portion of the fees (which will be paid to this account) according to the contribution made
-    function getMyShare() external{
+    function getMyShare() external
+    {
         address sender = msg.sender;
-        // as long as totalWeiReceived is zero (prior to finalize), myShare will always be zero (x / 0 = 0).
-        uint myShare = (distro[sender] * (this.balance + withdrawn) / totalWeiReceived - payedOut[sender]);
-        if (myShare != 0 && sender.send(myShare))
+        // as long as totalWeiReceived is zero (prior to finalize), myShare will always be zero since x / 0 = 0 in the EVM.
+        uint myShareInPercent = distro[sender] / totalWeiReceived;
+        uint totalDividends = this.balance + withdrawn;
+        uint myDividends = myShareInPercent * totalDividends - payedOut[sender];
+        if (myDividends != 0 && sender.send(myDividends))
         {
-            payedOut[sender] += myShare;
-            withdrawn +=myShare;
+            payedOut[sender] += myDividends;
+            withdrawn +=myDividends;
         }
     }
 
@@ -57,20 +57,21 @@ contract SlockCrowdfunding {
     function transfer(uint _value, address _to) external returns (bool _success)
     {
         address sender = msg.sender;
-	    uint fullshare = distro[msg.sender];
-	    if (_value <= fullshare){
+	    uint myShares = distro[msg.sender];
+	    if (_value <= myShares){
 		    distro[msg.sender] -= _value;
 		    distro[_to] += _value;
-		    payedOut[_to] += payedOut[msg.sender] * _value / fullshare;
-		    payedOut[msg.sender] -= payedOut[msg.sender] * _value / fullshare;
-		    return true;
+		    uint fraction =  _value / myShares;
+		    payedOut[_to] += payedOut[msg.sender] * fraction;
+		    payedOut[msg.sender] -= payedOut[msg.sender] * fraction;
+		    _success =  true;
 	    }
-	return false;
+	_success = false;
     }
 
     function balanceOf(address _addr) constant returns (uint _r)
     {
-        return distro[_addr];
+        _r = distro[_addr];
     }
 }
 
