@@ -37,7 +37,7 @@ contract Slock is SubUser  {
         isFeeFree = false;
 	}
 	  
-	modifier require(bool _condition)
+    modifier require(bool _condition)
     {
         if (!_condition) throw;
         _
