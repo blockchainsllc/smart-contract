@@ -1,26 +1,28 @@
-contract SlockCrowdfunding
+contract SlockDAO
 {
     
-    mapping (address => uint) distro;   // value is amount of wei (smallest unit of ether) given in crowdsale by an individual supporter
-    mapping (address => uint) payedOut; // value is amount of wei already payed out to the individual supporter
-    uint totalWeiReceived;              // total number of wei received if the crowdsale is successful, only non-zero after pay out to Slock (sum of all distro[...] )
-    uint withdrawn;                     // total amount of wei already withdrawn through supporters (sum of all payedOut[...] )
-    uint closingTime;                   // end of crowdsale
-    uint minValue;                      // minimal goal of crowdsale
+    mapping (address => uint) distro;   // value is amount of wei given to crowdfunding
+    mapping (address => uint) payedOut; // value is amount already payed out to supporter
+    uint totalWeiReceived;              // total number of wei received in successful crowdfunding, only non-zero after pay out to Slock (sum of all distro[...] )
+    uint withdrawn;                     // total amount of wei already withdrawn through supportes (sum of all payedOut[...] )
+    uint closingTime;                   // end of crowdfunding
+    uint minValue;                      // minimal goal of crowdfunding
 
-    //constructor -  set timeframe and minimal goal initiating the crowdsale 
-    function SlockCrowdfunding(uint _minValue, uint _closingTime) {
+    //constructor -  set timeframe and minimal goal for crowdfunding
+    function SlockDAO(uint _minValue, uint _closingTime) {
         minValue = _minValue;
         closingTime = _closingTime;
+        oneTimeFee = 50 ether; // TODO implement regular vote on this number
+        feeDivisor = 100; // = 1% fee TODO implement regular vote on this number
     }
 
-    // contribute to the crowdsale (fallback function, called when no other function is called, no data given in transaction). It is also called when receiving money from the Slock smart contract
+    // contribute to crowdfunding (fallback function, called when no other function is called, no data given in transaction). It is also called when receiving money from the slock smart contract
     function()
     {
         if (now <= closingTime) distro[msg.sender] += msg.value;
     }
 
-    // if the minimal goal was not reached, give back the money to the supporters
+    // in the case the minimal goal was not reached, give back the money to the supporters
     function refund() external
     {
          if (now > closingTime && this.balance < minValue && totalWeiReceived == 0 || payedOut[msg.sender] == 0 )
@@ -28,7 +30,7 @@ contract SlockCrowdfunding
              if (msg.sender.send(distro[msg.sender])) payedOut[msg.sender] = 1;
          }
     }
-    //the purpose of this function is to send all the money to Slock GmbH (The Slock Trustees) if the crowdsale is successful.
+    //the purpose of this function is to send all the money to Slock GmbH,
     function finalize() external
     {
         if (now > closingTime && msg.sender == 0x510c && totalWeiReceived == 0 && this.balance >= minValue)
@@ -37,7 +39,7 @@ contract SlockCrowdfunding
         }
     }
 
-    // after the crowdsale is over, this function can be called to get the portion of the fees (which will be paid to this account) according to the contribution made
+    // after the crowdfunding is over, this function can be called to get the portion of the fees (which will be paid to this account) according to the contribution made
     function receiveDividends()
     {
         address sender = msg.sender;
@@ -51,6 +53,23 @@ contract SlockCrowdfunding
             withdrawn +=myDividends;
         }
     }
+    
+    // interface to base Slock contract
+    uint public oneTimeFee;
+    uint public feeDivisor;
+    
+    function payOneTimeFee() returns(bool) {
+        if (msg.value >= oneTimeFee)
+            return true;
+        else
+            throw;
+    }
+    
+    function getFeeDivisor() returns(uint) {
+        return feeDivisor;
+    }
+    
+    // implement basic Token API (TODO to be completed)
 
     // transfer (part of) your contribution to another address
     function transfer(uint _value, address _to) external returns (bool _success)
@@ -74,4 +93,3 @@ contract SlockCrowdfunding
         _r = distro[_addr];
     }
 }
-
