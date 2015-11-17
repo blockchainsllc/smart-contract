@@ -25,7 +25,7 @@ contract SlockDAO
     // in the case the minimal goal was not reached, give back the money to the supporters
     function refund() external
     {
-         if (now > closingTime && this.balance < minValue && totalWeiReceived == 0 || payedOut[msg.sender] == 0 )
+         if (now > closingTime && this.balance < minValue && totalWeiReceived == 0 && payedOut[msg.sender] == 0 )
          {
              if (msg.sender.send(distro[msg.sender])) payedOut[msg.sender] = 1;
          }
