@@ -49,7 +49,7 @@
         if (m_numSubUsers >= c_maxsubUsers)
             reorganizeSubUsers();
         if (m_numSubUsers >= c_maxsubUsers)
-            return;
+            throw;
         m_numSubUsers++;
         m_subUsers[m_numSubUsers] = uint(_subUser);
         m_subUserIndex[uint(_subUser)] = m_numSubUsers;
