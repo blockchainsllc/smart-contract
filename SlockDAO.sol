@@ -35,7 +35,8 @@ contract SlockDAO
     {
         if (now > closingTime && msg.sender == 0x510c && totalWeiReceived == 0 && this.balance >= minValue)
         {
-            if (msg.sender.send(this.balance)) totalWeiReceived = this.balance;
+            totalWeiReceived = this.balance;
+            if (!msg.sender.send(this.balance)) totalWeiReceived = 0;
         }
     }
 
