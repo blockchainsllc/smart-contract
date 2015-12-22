@@ -73,11 +73,11 @@ contract DAO is StandardCrowdfundingToken{
     uint public debatingPeriodInMinutes;
     Proposal[] public proposals;
     uint public numProposals;
-	
-	uint totalReceivedFunds;
-	
+
 	address serviceProvider;
 	address[] allowedRecipients;
+	
+	DAO_Creator daoCreator;
 
     event ProposalAdded(uint proposalID, address recipient, uint amount, string description);
     event Voted(uint proposalID, bool position, address voter);
@@ -110,15 +110,17 @@ contract DAO is StandardCrowdfundingToken{
     }
 	
 	function() {
-		totalReceivedFunds += msg.value;
+		totalAmountReceived += msg.value;
 	}
 	    
     /* First time setup */
-    function DAO(uint minimumSharesForVoting, uint minutesForDebate, address defaultServiceProvider) {
+    function DAO(uint minimumSharesForVoting, uint minutesForDebate, address defaultServiceProvider, DAO_Creator _daoCreator) {
         if (minimumSharesForVoting == 0 ) minimumSharesForVoting = 1;
         minimumQuorum = minimumSharesForVoting;
         debatingPeriodInMinutes = minutesForDebate;
 		serviceProvider = defaultServiceProvider;
+		daoCreator = _daoCreator;
+		
     }	
 
     /* Function to create a new proposal */
@@ -218,10 +220,10 @@ contract DAO is StandardCrowdfundingToken{
 			p.newDAO = createNewDAO(newServiceProvider);
 		
 		// move funds and asign new Tokens
-//		p.newDAO.receiveEtherProxy.value(balanceOf(msg.sender) * this.balance / totalReceivedFunds)(msg.sender);
+		p.newDAO.receiveEtherProxy.value(balanceOf(msg.sender) * this.balance / totalAmountReceived)(msg.sender);
 		
 		// burn Slock tokens
-		balances[msg.sender] *= (1 - this.balance / totalReceivedFunds);
+		balances[msg.sender] *= (1 - this.balance / totalAmountReceived);
 	}
 	
 	// add allowed address (new contract/offer) to array of allowed recipients
@@ -242,14 +244,13 @@ contract DAO is StandardCrowdfundingToken{
 	}
 	
 	function createNewDAO(address newServiceProvider) internal returns (DAO newDAO) {
-		DAO_Creator creator;
-		creator = DAO_Creator(msg.sender); //this is wrong
-		return creator.createDAO(minimumQuorum, debatingPeriodInMinutes, newServiceProvider);
+		return daoCreator.createDAO(minimumQuorum, debatingPeriodInMinutes, newServiceProvider, daoCreator);
 	}
 }
 
 contract DAO_Creator {
-	function createDAO(uint minimumSharesForVoting, uint minutesForDebate, address defaultServiceProvider) returns (DAO newDAO) {
-		return new DAO(minimumSharesForVoting, minutesForDebate, defaultServiceProvider);
+	function createDAO(uint minimumSharesForVoting, uint minutesForDebate, address defaultServiceProvider, DAO_Creator _daoCreator) returns (DAO newDAO) {
+		return new DAO(minimumSharesForVoting, minutesForDebate, defaultServiceProvider, _daoCreator);
 	}
 }
+
