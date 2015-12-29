@@ -1,5 +1,10 @@
-import "SubUser";
-import "SlockDAO";
+import "SubUser.sol";
+//import "SlockDAO - deprecated";
+
+contract SlockitDAO {
+    function payOneTimeFee() returns(bool) {}
+    function getFeeDivisor() returns(uint) {}
+}
 
 contract Slock is SubUser  {
     
@@ -37,7 +42,7 @@ contract Slock is SubUser  {
         isFeeFree = false;
 	}
 	  
-    modifier require(bool _condition)
+	modifier require(bool _condition)
     {
         if (!_condition) throw;
         _
@@ -85,8 +90,8 @@ contract Slock is SubUser  {
     }
     
     function payOneTimeFee() {
-        address daoAdress = 0xaabbccddeeff0011223344556677889900aabbcc; // TODO replace by the DAO address
-        if (SlockDAO(daoAdress).payOneTimeFee.value(msg.value)())
+        address SlockitAddress = 0xaabbccddeeff0011223344556677889900aabbcc; // TODO replace by the Slock.it Gmbh - DAO contract address
+        if (SlockitDAO(SlockitAddress).payOneTimeFee.value(msg.value)())
             isFeeFree = true;
         else
             throw;
@@ -116,7 +121,7 @@ contract Slock is SubUser  {
         isRented = true;
     }
     
-    function returnit() onlyUser noMoney {
+    function returnIt() onlyUser noMoney {
         uint cost = costs();
         if (cost > deposit)
             cost = deposit;
@@ -127,7 +132,7 @@ contract Slock is SubUser  {
             owner.send(cost);
         else {
             address dao = 0xff; //to be replaced by the DAO address
-            uint divisor = SlockDAO(dao).getFeeDivisor();
+            uint divisor = SlockitDAO(dao).getFeeDivisor();
             dao.send(cost / divisor);
             owner.send(cost - cost / divisor ); 
         }
@@ -145,7 +150,7 @@ contract Slock is SubUser  {
                 owner.send(cost);
             else {
                 address dao = 0xff; //to be replaced by the DAO address
-                uint divisor = SlockDAO(dao).getFeeDivisor();
+                uint divisor = SlockitDAO(dao).getFeeDivisor();
                 dao.send(cost / divisor); // TODO make the 1% fee changeable by the DAO
                 owner.send(cost - cost / divisor ); 
             }

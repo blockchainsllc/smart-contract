@@ -35,53 +35,45 @@ For more information, please refer to <http://unlicense.org>
 TODO:
 better debatingPeriod mechanism (based on amount, min, max, ...)
 include tx.data in proposal?
-
-implement crowdfunding, especially for confirmNewServiceProvider
-
-not allowed to spent Ether if success = false
+min quorum / deposit
 
 
-contract DAO_CreatorBase {
-	function createDAO(uint minimumSharesForVoting, uint minutesForDebate, address defaultServiceProvider) returns (DAO newDAO) {}
-}
 */
-import "StandardToken";
-import "Crowdfunding";
-import "StandardCrowdfundingToken";
 
-/*
-contract DAO_Base is Crowdfunding {
+import "Crowdfunding.sol";
+
+contract DAOInterface {
 	modifier onlyShareholders {}
-	function() {}
-	function DAO(uint minimumSharesForVoting, uint minutesForDebate, address defaultServiceProvider) {}
-	function newProposal(address recipient, uint etherAmount, string JobDescription, bytes transactionBytecode, bool newServiceProvider) onlyShareholders returns (uint proposalID) {}
-	function checkProposalCode(uint proposalNumber, address beneficiary, uint etherAmount, bytes transactionBytecode) constant returns (bool codeChecksOut) {}
-	function vote(uint proposalNumber, bool supportsProposal) onlyShareholders returns (uint voteID){}
-	function executeProposal(uint proposalNumber, bytes transactionBytecode) returns (int result) {}
-	function confirmNewServiceProvider(uint proposalNumber, address newServiceProvider) {}
-	function addAllowedAddress(address recipient) external {}
-	function isRecipientAllowed(address recipient) internal returns (bool isAllowed) {}
-	function createNewDAO(address newServiceProvider) internal returns (DAO_Base newDAO) {}	
+
+	function newProposal(address _recipient, uint _etherAmount, string _description, bytes _transactionBytecode, bool _newServiceProvider) onlyShareholders returns (uint _proposalID) {}
+	function checkProposalCode(uint _proposalID, address _recipient, uint _etherAmount, bytes _transactionBytecode) constant returns (bool _codeChecksOut) {}
+	function vote(uint _proposalID, bool supportsProposal) onlyShareholders returns (uint _voteID){}
+	function executeProposal(uint _proposalID, bytes transactionBytecode) returns (bool _success) {}
+	function confirmNewServiceProvider(uint _proposalID, address newServiceProvider) {}
+	function addAllowedAddress(address _recipient) external {}
+	
+	event ProposalAdded(uint proposalID, address recipient, uint amount, string description);
+    event Voted(uint proposalID, bool position, address voter);
+    event ProposalTallied(uint proposalID, bool result, uint quorum, bool active);
+	event NewServiceProvider(address _newServiceProvider);
+	event AllowedRecipientAdded(address _recipient);
 }
-*/
 
 /* The democracy contract itself */
-contract DAO is StandardCrowdfundingToken{
+contract DAO is DAOInterface, Token, Crowdfunding(500000 ether, now + 42 days) {  // I would rather use the dynamic initialization instead of the static one (see construcitor), but doesn't work yet, due to a bug in Solidity
 
     /* Contract Variables and events */
-    uint public minimumQuorum;
-    uint public debatingPeriodInMinutes;
     Proposal[] public proposals;
     uint public numProposals;
+    uint dividends;
 
 	address serviceProvider;
 	address[] allowedRecipients;
 	
+	// deposit in Ether to be paid for each proposal
+	uint proposalDeposit;
+	
 	DAO_Creator daoCreator;
-
-    event ProposalAdded(uint proposalID, address recipient, uint amount, string description);
-    event Voted(uint proposalID, bool position, address voter);
-    event ProposalTallied(uint proposalID, int result, uint quorum, bool active);
     
     struct Proposal {
         address recipient;
@@ -96,6 +88,7 @@ contract DAO is StandardCrowdfundingToken{
 		DAO newDAO;
         Vote[] votes;
         mapping (address => bool) voted;
+		address creator;
     }
 
     struct Vote {
@@ -106,73 +99,77 @@ contract DAO is StandardCrowdfundingToken{
     /* modifier that allows only shareholders to vote and create new proposals */
     modifier onlyShareholders {
         if (balanceOf(msg.sender) == 0) throw;
-        _
+        	_
     }
 	
+
 	function() {
-		totalAmountReceived += msg.value;
+		dividends += msg.value;
 	}
-	    
+	
     /* First time setup */
-    function DAO(uint minimumSharesForVoting, uint minutesForDebate, address defaultServiceProvider, DAO_Creator _daoCreator) {
-        if (minimumSharesForVoting == 0 ) minimumSharesForVoting = 1;
-        minimumQuorum = minimumSharesForVoting;
-        debatingPeriodInMinutes = minutesForDebate;
-		serviceProvider = defaultServiceProvider;
+    
+    // I would rather use the dynamic initialization instead of the static one (see declaration above), but doesn't work yet, due to a bug in Solidity
+    //function DAO(address defaultServiceProvider, DAO_Creator _daoCreator, uint _minValue, uint _closingTime) Crowdfunding(_minValue, _closingTime) {
+    function DAO(address _defaultServiceProvider, DAO_Creator _daoCreator) {
+		serviceProvider = _defaultServiceProvider;
 		daoCreator = _daoCreator;
-		
-    }	
+		proposalDeposit = 100 ether;
+    }
 
     /* Function to create a new proposal */
-    function newProposal(address recipient, uint etherAmount, string JobDescription, bytes transactionBytecode, bool newServiceProvider) onlyShareholders returns (uint proposalID) {
-		// check sanityy
-		if (newServiceProvider) {
-			if (etherAmount != 0 || transactionBytecode.length != 0 || recipient == serviceProvider)
-				throw;
+    function newProposal(address _recipient, uint _etherAmount, string _description, bytes _transactionBytecode, bool _newServiceProvider) onlyShareholders returns (uint _proposalID) {
+		// check sanity
+		if (_newServiceProvider && (_etherAmount != 0 || _transactionBytecode.length != 0 || _recipient == serviceProvider)) {
+			throw;
 		}
-        else if (!isRecipientAllowed(recipient)) throw;
+        else if (!isRecipientAllowed(_recipient)) throw;
 		
-		proposalID = proposals.length++;
-        Proposal p = proposals[proposalID];
-        p.recipient = recipient;
-        p.amount = etherAmount;
-        p.description = JobDescription;
-        p.proposalHash = sha3(recipient, etherAmount, transactionBytecode);
-        p.votingDeadline = now + debatingPeriodInMinutes * 1 minutes;
+        if (!funded || msg.value < proposalDeposit) throw;
+		
+		_proposalID = proposals.length++;
+        Proposal p = proposals[_proposalID];
+        p.recipient = _recipient;
+        p.amount = _etherAmount;
+        p.description = _description;
+        p.proposalHash = sha3(_recipient, _etherAmount, _transactionBytecode);
+		p.votingDeadline = now + debatingPeriod(_newServiceProvider, _etherAmount * 1 ether);
         p.openToVote = true;
         p.proposalPassed = false;
         p.numberOfVotes = 0;
-		p.newServiceProvider = newServiceProvider;
-        ProposalAdded(proposalID, recipient, etherAmount, JobDescription);
-        numProposals = proposalID + 1;
+		p.newServiceProvider = _newServiceProvider;
+		p.creator = msg.sender;
+        ProposalAdded(_proposalID, _recipient, _etherAmount, _description);
+        numProposals = _proposalID + 1;
     }
     
     /* function to check if a proposal code matches */
-    function checkProposalCode(uint proposalNumber, address beneficiary, uint etherAmount, bytes transactionBytecode) constant returns (bool codeChecksOut) {
-        Proposal p = proposals[proposalNumber];
-        return p.proposalHash == sha3(beneficiary, etherAmount, transactionBytecode);
+    function checkProposalCode(uint _proposalNumber, address _recipient, uint _etherAmount, bytes _transactionBytecode) constant returns (bool _codeChecksOut) {
+        Proposal p = proposals[_proposalNumber];
+        return p.proposalHash == sha3(_recipient, _etherAmount, _transactionBytecode);
     }
-    
-    /* */
-    function vote(uint proposalNumber, bool supportsProposal) onlyShareholders returns (uint voteID){
-        Proposal p = proposals[proposalNumber];
+
+	
+	/* function to vote on proposal */
+	function vote(uint _proposalNumber, bool _supportsProposal) onlyShareholders returns (uint _voteID){
+		Proposal p = proposals[_proposalNumber];
         if (p.voted[msg.sender] == true) throw;
         
-        voteID = p.votes.length++;
-        p.votes[voteID] = Vote({inSupport: supportsProposal, voter: msg.sender});
+        _voteID = p.votes.length++;
+        p.votes[_voteID] = Vote({inSupport: _supportsProposal, voter: msg.sender});
         p.voted[msg.sender] = true;
-        p.numberOfVotes = voteID +1;
-        Voted(proposalNumber,  supportsProposal, msg.sender);
-    }
+        p.numberOfVotes = _voteID + 1;
+        Voted(_proposalNumber, _supportsProposal, msg.sender);
+	}
 	
     
-    function executeProposal(uint proposalNumber, bytes transactionBytecode) returns (int result) {
-        Proposal p = proposals[proposalNumber];
+    function executeProposal(uint _proposalNumber, bytes _transactionBytecode) returns (bool _success) {
+        Proposal p = proposals[_proposalNumber];
         /* Check if the proposal can be executed */
         if (now < p.votingDeadline  /* has the voting deadline arrived? */ 
             || !p.openToVote        /* has it been already executed? */
-            || p.proposalHash != sha3(p.recipient, p.amount, transactionBytecode) /* Does the transaction code match the proposal? */
-		    || p.newServiceProvider) // is it a new service provider proposale
+            || p.proposalHash != sha3(p.recipient, p.amount, _transactionBytecode) /* Does the transaction code match the proposal? */
+		    || p.newServiceProvider) // is it a new service provider proposal
             throw;
 
         /* tally the votes */
@@ -184,73 +181,95 @@ contract DAO is StandardCrowdfundingToken{
             Vote v = p.votes[i];
             uint voteWeight = balanceOf(v.voter); 
             quorum += voteWeight;
-            if (v.inSupport) {
+            if (v.inSupport)
                 yea += voteWeight;
-            } else {
-                nay += voteWeight;
-            }
+            else
+                nay += voteWeight;            
         }
         /* execute result */
-        if (quorum > minimumQuorum && yea > nay ) {
+        if (quorum >= minQuorum(p.newServiceProvider, p.amount) && yea > nay ) {
             // has quorum and was approved
-            p.recipient.call.value(p.amount*1000000000000000000)(transactionBytecode);
-            p.openToVote = false;
-            p.proposalPassed = true;
-        } else if (quorum > minimumQuorum && nay > yea) {
+			if (p.recipient.call.value(p.amount * 1 ether)(_transactionBytecode)) {
+            	p.openToVote = false;
+            	p.proposalPassed = true;
+				_success = true;
+				p.creator.send(proposalDeposit);
+			}
+        } else if (quorum >= minQuorum(p.newServiceProvider, p.amount) && nay > yea) {
             p.openToVote = false;
             p.proposalPassed = false;
+			p.creator.send(proposalDeposit);
         } 
         /* Fire Events */
-        ProposalTallied(proposalNumber, result, quorum, p.openToVote);
+        ProposalTallied(_proposalNumber, _success, quorum, p.openToVote);
     }
 	
 	
-	function confirmNewServiceProvider(uint proposalNumber, address newServiceProvider) {
-		Proposal p = proposals[proposalNumber];
+	function confirmNewServiceProvider(uint _proposalNumber, address _newServiceProvider) {
+		Proposal p = proposals[_proposalNumber];
 		// sanity check
 		if (now < p.votingDeadline  /* has the voting deadline arrived? */ 
-            || !p.openToVote        /* has it been already executed? */
-            || p.proposalHash != sha3(p.recipient, p.amount, 0) /* Does the transaction code match the proposal? */
+            || p.proposalHash != sha3(p.recipient, 0, 0) /* Does the transaction code match the proposal? */
 		    || !p.newServiceProvider // is it a new service provider proposale
-			|| p.recipient != newServiceProvider)
+			|| p.recipient != _newServiceProvider)
             throw;
 		
 		// if not already happend, create new DAO
 		if (address(p.newDAO) == 0)
-			p.newDAO = createNewDAO(newServiceProvider);
+			p.newDAO = createNewDAO(_newServiceProvider);
 		
-		// move funds and asign new Tokens
-		p.newDAO.receiveEtherProxy.value(balanceOf(msg.sender) * this.balance / totalAmountReceived)(msg.sender);
+		// move funds and assign new Tokens
+		p.newDAO.buyTokenProxy.value(balanceOf(msg.sender) * this.balance / (totalAmountReceived + dividends))(msg.sender);
 		
 		// burn Slock tokens
-		balances[msg.sender] *= (1 - this.balance / totalAmountReceived);
+		balances[msg.sender] *= (1 - this.balance / (totalAmountReceived + dividends));
 	}
 	
 	// add allowed address (new contract/offer) to array of allowed recipients
-	function addAllowedAddress(address recipient) external {
+	function addAllowedAddress(address _recipient) external {
 		if (msg.sender == serviceProvider)
-			allowedRecipients.push(recipient);
+			allowedRecipients.push(_recipient);
+	}
+	
+	// add allowed address (new contract/offer) to array of allowed recipients
+	function changeProposalDeposit(uint _proposalDeposit) external {
+		if (msg.sender == serviceProvider)
+			proposalDeposit = _proposalDeposit;
 	}
 	
 	// check whether recipient is serviceProvider or an address provided by him
-	function isRecipientAllowed(address recipient) internal returns (bool isAllowed) {		
+	function isRecipientAllowed(address recipient) internal returns (bool _isAllowed) {		
 		if  (recipient == serviceProvider)
 			return true;
-		for (uint i = 0; i <  allowedRecipients.length; ++i) {
+		for (uint i = 0; i < allowedRecipients.length; ++i) {
 			if (recipient == allowedRecipients[i])
 				return true;
 		}
 		return false;
 	}
 	
-	function createNewDAO(address newServiceProvider) internal returns (DAO newDAO) {
-		return daoCreator.createDAO(minimumQuorum, debatingPeriodInMinutes, newServiceProvider, daoCreator);
+	function debatingPeriod(bool _newServiceProvider, uint _value) internal returns (uint _debatingPeriod) {
+		if (_newServiceProvider)
+			return 61 days;
+		else 
+			return 1 weeks + (_value * 31 days) / totalAmountReceived;
+	}
+	
+	function minQuorum(bool _newServiceProvider, uint _value) internal returns (uint _minQuorum) {
+		if (_newServiceProvider)
+			return totalAmountReceived / 2;
+		else 
+			return totalAmountReceived / 5 + _value / 3;
+	}
+	
+	function createNewDAO(address _newServiceProvider) internal returns (DAO _newDAO) {
+		NewServiceProvider(_newServiceProvider);
+		return daoCreator.createDAO(_newServiceProvider, daoCreator);
 	}
 }
 
 contract DAO_Creator {
-	function createDAO(uint minimumSharesForVoting, uint minutesForDebate, address defaultServiceProvider, DAO_Creator _daoCreator) returns (DAO newDAO) {
-		return new DAO(minimumSharesForVoting, minutesForDebate, defaultServiceProvider, _daoCreator);
+	function createDAO(address _defaultServiceProvider, DAO_Creator _daoCreator) returns (DAO _newDAO) {
+		return new DAO(_defaultServiceProvider, _daoCreator);
 	}
 }
-

@@ -67,9 +67,7 @@
     }
     function removeAllSubUsers() internal {
         for (var i = 1; i <= m_numSubUsers; i++)
-        {
             m_subUserIndex[m_subUsers[i]] = 0;
-        }
         delete m_subUsers;
         m_numSubUsers = 0;
     }
