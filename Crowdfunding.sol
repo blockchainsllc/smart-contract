@@ -36,51 +36,64 @@ For more information, please refer to <http://unlicense.org>
 import "Token.sol";
 
 contract CrowdfundingInterface {
-	function Crowdfunding(uint _minValue, uint _closingTime) {}
-	function buyToken() {}
-	function buyTokenProxy(address _beneficiary) {}
-	function refund() {}
-	
-	event Funded(uint value);
-	event SoldToken(address to, uint value);
-	event Refund(address to, uint value);
+    /// @dev Constructor setting the minimal target and the end of the crowdsale
+    /// @param _minValue Minimal value for a successful crowdfunding
+    /// @param _closingTime Date (in unix time) of the end of the crowdsale
+    function Crowdfunding(uint _minValue, uint _closingTime) {}
+
+    /// @notice Buy token with `msg.sender` as the beneficiary. One ether creates one token (same base units)
+    function buyToken() {}
+
+    /// @notice Buy token with `_beneficiary` as the beneficiary. One ether creates one token (same base units)
+    /// @param _beneficiary The beneficary of for the token bought with ether
+    function buyTokenProxy(address _beneficiary) {}
+
+    /// @notice Refund `msg.sender` in the case of a not successful crowdfunding
+    function refund() {}
+
+    event Funded(uint value);
+    event SoldToken(address to, uint value);
+    event Refund(address to, uint value);
 }
 
 contract Crowdfunding is CrowdfundingInterface, Token {
-	uint public closingTime;                   // end of crowdfunding
+    uint public closingTime;                   // end of crowdfunding
     uint public minValue;                      // minimal goal of crowdfunding
-	uint public totalAmountReceived;
-	bool public funded;
-	
-	function Crowdfunding(uint _minValue, uint _closingTime) {
-		closingTime = _closingTime;
-		minValue = _minValue;
-	}
-	
-	function buyToken() {
-		buyTokenProxy(msg.sender);
-	}
-	
-	function buyTokenProxy(address _beneficiary) {
-		if (now < closingTime) {
-			balances[_beneficiary] += msg.value;		
-			totalAmountReceived += msg.value;
-			SoldToken(_beneficiary, msg.value);
-			if (totalAmountReceived >= minValue && !funded) {
-				funded = true;
-				Funded(totalAmountReceived);
-			}
-		}
-	}
-	
-	// in the case the minimal goal was not reached, give back the Ether to the supporters
+    uint public totalAmountReceived;           // total amount of received wei in the crowdfunding
+    bool public funded;  
+
+
+    function Crowdfunding(uint _minValue, uint _closingTime) {
+        closingTime = _closingTime;
+        minValue = _minValue;
+    }
+
+
+    function buyToken() {
+        buyTokenProxy(msg.sender);
+    }
+
+
+    function buyTokenProxy(address _beneficiary) {
+        if (now < closingTime) {
+            balances[_beneficiary] += msg.value;        
+            totalAmountReceived += msg.value;
+            SoldToken(_beneficiary, msg.value);
+            if (totalAmountReceived >= minValue && !funded) {
+                funded = true;
+                Funded(totalAmountReceived);
+            }
+        }
+    }
+
+
     function refund() {
          if (now > closingTime 
-			 && !funded
-			 && msg.sender.send(balances[msg.sender])) // execute refund 
+             && !funded
+             && msg.sender.send(balances[msg.sender])) // execute refund 
          {
              balances[msg.sender] = 0;
-			 Refund(msg.sender, msg.value);
+             Refund(msg.sender, msg.value);
          }
     }
 }
