@@ -1,2 +1,2 @@
 # smart-contract
-slock smart contract written in solidity
+smart contracts for the DAO as well as for the single Slocks
