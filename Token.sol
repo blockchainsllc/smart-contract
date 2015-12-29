@@ -38,6 +38,8 @@ Original taken from gist.github.com/simondlr/9a9c658d4f5f8c2e88fd
 which is based on standardised APIs: https://github.com/ethereum/wiki/wiki/Standardized_Contract_APIs
 .*/
 
+/// @title Standard Token Contract.
+
 contract TokenInterface {
     /// @notice send `_value` token to `_to` from `msg.sender`
     /// @param _value The amount of token to be transfered
