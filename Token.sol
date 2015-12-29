@@ -47,7 +47,7 @@ contract TokenInterface {
     /// @return Whether the transfer was successful or not
     function transfer(uint _value, address _to) returns (bool _success) {}
 
-	/// @notice send `_value` token to `_to` from `_from`
+    /// @notice send `_value` token to `_to` from `_from`
     /// @param _value The amount of token to be transfered
     /// @param _to The address of the recipient
     /// @param _from The address of the sender
@@ -61,7 +61,7 @@ contract TokenInterface {
     /// @notice `msg.sender` approves `_addr` to transfer his tokens
     /// @param _addr The address of the account able to transfer the tokens
     /// @return Whether the approval was successful or not
-	function approve(address _addr) returns (bool _success) {}
+    function approve(address _addr) returns (bool _success) {}
 
     /// @notice `msg.sender` unapproves `_addr` to tranfers his token
     /// @param _addr The address of the account now unable to transfer the tokens
@@ -95,7 +95,7 @@ contract Token is TokenInterface {
     mapping (address => uint) balances;
     mapping (address => mapping (address => bool)) approved;
     mapping (address => mapping (address => uint256)) approved_once;
-	
+    
 
     function transfer(uint _value, address _to) returns (bool _success) {
         if (balances[msg.sender] >= _value) {
@@ -104,10 +104,10 @@ contract Token is TokenInterface {
             Transfer(msg.sender, _to, _value);
             return true;
         }
-		else
-			return false;
+        else
+            return false;
     }
-	
+    
 
     function transferFrom(address _from, uint _value, address _to) returns (bool _success) {
         if (balances[_from] >= _value) {
@@ -115,7 +115,7 @@ contract Token is TokenInterface {
             if (approved[_from][msg.sender]) {
                 transfer = true;
             } 
-			else if (_value <= approved_once[_from][msg.sender]) {
+            else if (_value <= approved_once[_from][msg.sender]) {
                     transfer = true;
                     approved_once[_from][msg.sender] = 0; //reset                
             }
@@ -126,15 +126,15 @@ contract Token is TokenInterface {
                 Transfer(_from, _to, _value);
                 return true;
             } 
-			else
-				return false;
+            else
+                return false;
         }
-		else
-			return false;
+        else
+            return false;
     }
 
 
-	function balanceOf(address _addr) constant returns (uint _r) {
+    function balanceOf(address _addr) constant returns (uint _r) {
         return balances[_addr];
     }
 
