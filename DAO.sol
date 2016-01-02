@@ -146,13 +146,6 @@ contract DAO is DAOInterface, Token, Crowdfunding(500000 ether, now + 42 days) {
     }
 
 
-    // modifier that allows only the servie provider to add new allowed addresses and change the proposal deposit
-    modifier onlyServiceProvider {
-        if (msg.sender != serviceProvider) throw;
-            _
-    }
-    
-
     function() {
         dividends += msg.value;
     }
@@ -163,6 +156,7 @@ contract DAO is DAOInterface, Token, Crowdfunding(500000 ether, now + 42 days) {
         serviceProvider = _defaultServiceProvider;
         daoCreator = _daoCreator;
         proposalDeposit = 100 ether;
+        allowedRecipients.push(this);  // allow to send transactions to itself, in order to change proposal deposit
     }
 
 
@@ -275,13 +269,15 @@ contract DAO is DAOInterface, Token, Crowdfunding(500000 ether, now + 42 days) {
     }
 
 
-    function addAllowedAddress(address _recipient) onlyServiceProvider external {
-         allowedRecipients.push(_recipient);
+    function addAllowedAddress(address _recipient) external {
+        if (msg.sender != serviceProvider) throw; 
+            allowedRecipients.push(_recipient);
     }
 
 
-    function changeProposalDeposit(uint _proposalDeposit) onlyServiceProvider external {
-        proposalDeposit = _proposalDeposit;
+    function changeProposalDeposit(uint _proposalDeposit) external {
+		if (msg.sender != address(this)) throw;
+            proposalDeposit = _proposalDeposit;
     }
 
 
