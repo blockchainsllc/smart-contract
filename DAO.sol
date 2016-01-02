@@ -211,8 +211,7 @@ contract DAO is DAOInterface, Token, Crowdfunding(500000 ether, now + 42 days) {
         // Check if the proposal can be executed
         if (now < p.votingDeadline  // has the voting deadline arrived?
             || !p.openToVote        // has it been already executed?
-            || p.proposalHash != sha3(p.recipient, p.amount, _transactionBytecode) // Does the transaction code match the proposal?
-            || p.newServiceProvider) // is it a new service provider proposal
+            || p.proposalHash != sha3(p.recipient, p.amount, _transactionBytecode)) // Does the transaction code match the proposal?
             throw;
 
         // tally the votes
