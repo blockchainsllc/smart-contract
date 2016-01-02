@@ -108,13 +108,13 @@ contract DAO is DAOInterface, Token, Crowdfunding(500000 ether, now + 42 days) {
     /* Contract Variables and events */
     Proposal[] public proposals;
     uint public numProposals;
-    uint dividends;
+    uint public dividends;
 
-    address serviceProvider;
-    address[] allowedRecipients;
+    address public serviceProvider;
+    address[] public allowedRecipients;
 
     // deposit in Ether to be paid for each proposal
-    uint proposalDeposit;
+    uint public proposalDeposit;
 
     DAO_Creator daoCreator;
     
@@ -265,11 +265,13 @@ contract DAO is DAOInterface, Token, Crowdfunding(500000 ether, now + 42 days) {
         if (address(p.newDAO) == 0)
             p.newDAO = createNewDAO(_newServiceProvider);
 
-        // move funds and assign new Tokens
-        p.newDAO.buyTokenProxy.value(balanceOf(msg.sender) * this.balance / (totalAmountReceived + dividends))(msg.sender);
+        uint tokenToBeBurnedAndMoved = (balances[msg.sender] * this.balance) / (totalAmountReceived + dividends);
 
         // burn Slock tokens
-        balances[msg.sender] *= (1 - this.balance / (totalAmountReceived + dividends));
+        balances[msg.sender] -= tokenToBeBurnedAndMoved;
+
+        // move funds and assign new Tokens
+        p.newDAO.buyTokenProxy.value(tokenToBeBurnedAndMoved)(msg.sender);
     }
 
 
