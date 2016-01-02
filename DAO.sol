@@ -127,6 +127,7 @@ contract DAO is DAOInterface, Token, Crowdfunding(500000 ether, now + 42 days) {
         bool proposalPassed;
         uint numberOfVotes;
         bytes32 proposalHash;
+        uint proposalDeposit;
         bool newServiceProvider;
         DAO newDAO;
         Vote[] votes;
@@ -181,6 +182,7 @@ contract DAO is DAOInterface, Token, Crowdfunding(500000 ether, now + 42 days) {
         p.numberOfVotes = 0;
         p.newServiceProvider = _newServiceProvider;
         p.creator = msg.sender;
+        p.proposalDeposit = proposalDeposit;
         ProposalAdded(_proposalID, _recipient, _etherAmount, _description);
         numProposals = _proposalID + 1;
     }
@@ -229,17 +231,16 @@ contract DAO is DAOInterface, Token, Crowdfunding(500000 ether, now + 42 days) {
         }
         // execute result
         if (quorum >= minQuorum(p.newServiceProvider, p.amount) && yea > nay ) {
-            // has quorum and was approved
+            p.creator.send(p.proposalDeposit);
             if (p.recipient.call.value(p.amount * 1 ether)(_transactionBytecode)) {
                 p.openToVote = false;
                 p.proposalPassed = true;
                 _success = true;
-                p.creator.send(proposalDeposit);
             }
         } else if (quorum >= minQuorum(p.newServiceProvider, p.amount) && nay > yea) {
             p.openToVote = false;
             p.proposalPassed = false;
-            p.creator.send(proposalDeposit);
+            p.creator.send(p.proposalDeposit);
         } 
         // fire event
         ProposalTallied(_proposalNumber, _success, quorum, p.openToVote);
@@ -270,7 +271,7 @@ contract DAO is DAOInterface, Token, Crowdfunding(500000 ether, now + 42 days) {
 
 
     function addAllowedAddress(address _recipient) external {
-        if (msg.sender != serviceProvider) throw; 
+        if (msg.sender != serviceProvider) throw;
             allowedRecipients.push(_recipient);
     }
 
