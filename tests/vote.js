@@ -18,8 +18,6 @@ tx = dao.vote.sendTransaction(0, 1, {from:eth.accounts[4],value:web3.toWei(101, 
 tx = dao.vote.sendTransaction(0, 1, {from:eth.accounts[5],value:web3.toWei(101, "ether"),gas:900000})
 tx = dao.vote.sendTransaction(0, 1, {from:eth.accounts[6],value:web3.toWei(101, "ether"),gas:900000})
 
-
-
 console.log("mining")
 miner.start(1); admin.sleepBlocks(1); miner.stop();
 
