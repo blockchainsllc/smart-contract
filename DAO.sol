@@ -52,7 +52,7 @@ contract DAOInterface {
 
     /// @notice `msg.sender` creates a proposal to send `_etherAmount` ether to `_recipient` with the transaction data `_transactionBytecode`. (If this is true: `_newServiceProvider` , then this is a proposal the set `_recipient` as the new service provider)
     /// @param _recipient The address of the recipient of the proposed transaction
-    /// @param _etherAmount The amount of ether to be sent with the proposed transaction
+    /// @param _etherAmount The amount of ether (in Wei) to be sent with the proposed transaction
     /// @param _description A string descibing the proposal
     /// @param _transactionBytecode The data of the proposed transaction
     /// @param _newServiceProvider A bool defining whether this proposal is about a new service provider or not
@@ -62,7 +62,7 @@ contract DAOInterface {
     /// @notice Check that the proposal with the ID `_proposalID` matches a transaction which sends `_etherAmount` with this data: `_transactionBytecode` to `_recipient`
     /// @param _proposalID The proposal ID
     /// @param _recipient The recipient of the proposed transaction
-    /// @param _etherAmount The amount of ether to be sent with the proposed transaction
+    /// @param _etherAmount The amount of ether (in Wei) to be sent with the proposed transaction
     /// @param _transactionBytecode The data of the proposed transaction
     /// @return Whether the proposal ID matches the transaction data or not
     function checkProposalCode(uint _proposalID, address _recipient, uint _etherAmount, bytes _transactionBytecode) constant returns (bool _codeChecksOut) {}
@@ -176,7 +176,7 @@ contract DAO is DAOInterface, Token, Crowdfunding(500000 ether, now + 42 days) {
         p.amount = _etherAmount;
         p.description = _description;
         p.proposalHash = sha3(_recipient, _etherAmount, _transactionBytecode);
-        p.votingDeadline = now + debatingPeriod(_newServiceProvider, _etherAmount * 1 ether);
+        p.votingDeadline = now + debatingPeriod(_newServiceProvider, _etherAmount);
         p.openToVote = true;
         p.proposalPassed = false;
         p.numberOfVotes = 0;
@@ -231,7 +231,7 @@ contract DAO is DAOInterface, Token, Crowdfunding(500000 ether, now + 42 days) {
         // execute result
         if (quorum >= minQuorum(p.newServiceProvider, p.amount) && yea > nay ) {
             p.creator.send(p.proposalDeposit);
-            if (p.recipient.call.value(p.amount * 1 ether)(_transactionBytecode)) {
+            if (p.recipient.call.value(p.amount)(_transactionBytecode)) {
                 p.openToVote = false;
                 p.proposalPassed = true;
                 _success = true;
