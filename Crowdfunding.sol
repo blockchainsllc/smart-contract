@@ -39,17 +39,17 @@ contract CrowdfundingInterface {
     /// @dev Constructor setting the minimal target and the end of the crowdsale
     /// @param _minValue Minimal value for a successful crowdfunding
     /// @param _closingTime Date (in unix time) of the end of the crowdsale
-    function Crowdfunding(uint _minValue, uint _closingTime) {}
+    //  function Crowdfunding(uint _minValue, uint _closingTime); // its commented out only because the constructor can not be overloaded
 
     /// @notice Buy token with `msg.sender` as the beneficiary. One ether creates one token (same base units)
-    function buyToken() {}
+    function buyToken();
 
     /// @notice Buy token with `_beneficiary` as the beneficiary. One ether creates one token (same base units)
     /// @param _beneficiary The beneficary of for the token bought with ether
-    function buyTokenProxy(address _beneficiary) {}
+    function buyTokenProxy(address _beneficiary);
 
     /// @notice Refund `msg.sender` in the case of a not successful crowdfunding
-    function refund() {}
+    function refund();
 
     event Funded(uint value);
     event SoldToken(address to, uint value);
@@ -57,9 +57,10 @@ contract CrowdfundingInterface {
 }
 
 contract Crowdfunding is CrowdfundingInterface, Token {
+
     uint public closingTime;                   // end of crowdfunding
     uint public minValue;                      // minimal goal of crowdfunding
-    uint public totalAmountReceived;           // total amount of received wei in the crowdfunding
+    uint public initialAmountReceived;           // total amount of received wei in the crowdfunding
     bool public funded;  
 
 
@@ -77,11 +78,11 @@ contract Crowdfunding is CrowdfundingInterface, Token {
     function buyTokenProxy(address _beneficiary) {
         if (now < closingTime) {
             balances[_beneficiary] += msg.value;        
-            totalAmountReceived += msg.value;
+            initialAmountReceived += msg.value;
             SoldToken(_beneficiary, msg.value);
-            if (totalAmountReceived >= minValue && !funded) {
+            if (initialAmountReceived >= minValue && !funded) {
                 funded = true;
-                Funded(totalAmountReceived);
+                Funded(initialAmountReceived);
             }
         }
     }
