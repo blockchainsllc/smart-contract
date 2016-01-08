@@ -48,7 +48,7 @@ contract DAOInterface {
     /// @dev Constructor setting the default service provider and the address for the contract able to create another DAO
     /// @param _defaultServiceProvider The default service provider
     /// @param _daoCreator The contract able to (re)create this DAO
-    function _DAO(address _defaultServiceProvider, DAO_Creator _daoCreator) {}   // the underscore is only because the constructor can not be overloaded
+    //  function DAO(address _defaultServiceProvider, DAO_Creator _daoCreator);  // its commented out only because the constructor can not be overloaded
 
     /// @notice `msg.sender` creates a proposal to send `_etherAmount` ether to `_recipient` with the transaction data `_transactionBytecode`. (If this is true: `_newServiceProvider` , then this is a proposal the set `_recipient` as the new service provider)
     /// @param _recipient The address of the recipient of the proposed transaction
@@ -57,7 +57,7 @@ contract DAOInterface {
     /// @param _transactionBytecode The data of the proposed transaction
     /// @param _newServiceProvider A bool defining whether this proposal is about a new service provider or not
     /// @return The proposal ID. Needed for voting on the proposal
-    function newProposal(address _recipient, uint _etherAmount, string _description, bytes _transactionBytecode, bool _newServiceProvider) onlyShareholders returns (uint _proposalID) {}
+    function newProposal(address _recipient, uint _etherAmount, string _description, bytes _transactionBytecode, bool _newServiceProvider) onlyShareholders returns (uint _proposalID);
 
     /// @notice Check that the proposal with the ID `_proposalID` matches a transaction which sends `_etherAmount` with this data: `_transactionBytecode` to `_recipient`
     /// @param _proposalID The proposal ID
@@ -65,35 +65,34 @@ contract DAOInterface {
     /// @param _etherAmount The amount of ether (in Wei) to be sent with the proposed transaction
     /// @param _transactionBytecode The data of the proposed transaction
     /// @return Whether the proposal ID matches the transaction data or not
-    function checkProposalCode(uint _proposalID, address _recipient, uint _etherAmount, bytes _transactionBytecode) constant returns (bool _codeChecksOut) {}
+    function checkProposalCode(uint _proposalID, address _recipient, uint _etherAmount, bytes _transactionBytecode) constant returns (bool _codeChecksOut);
 
     /// @notice Vote on proposal `_proposalID` with `_supportsProposal`
     /// @param _proposalID The proposal ID
     /// @param _supportsProposal Yes/No - support of the proposal
     /// @return The proposal ID.
-    function vote(uint _proposalID, bool _supportsProposal) onlyShareholders returns (uint _voteID){}
+    function vote(uint _proposalID, bool _supportsProposal) onlyShareholders returns (uint _voteID);
 
     /// @notice Checks whether proposal `_proposalID` with transaction data `_transactionBytecode` has been voted for or against it, and executes the transaction in the case it has been voted for.
     /// @param _proposalID The proposal ID
     /// @param _transactionBytecode The data of the proposed transaction
     /// @return Whether the proposed transaction has been executed or not
-    function executeProposal(uint _proposalID, bytes _transactionBytecode) returns (bool _success) {}
+    function executeProposal(uint _proposalID, bytes _transactionBytecode) returns (bool _success);
 
     /// @notice ATTENTION! I confirm to move my remaining funds to a new DAO with `_newServiceProvider` as the new service provider, as has been proposed in proposal `_proposalID`. This will burn the portion of my tokens according to the funds the DAO has already spent. This can not be undone and will split the DAO into two DAO's, with two underlying tokens.
     /// @param _proposalID The proposal ID
     /// @param _newServiceProvider The new service provider of the new DAO
     /// @dev This function, when called for the first time for this proposal, will create a new DAO and send the portion of the remaining funds which can be attributed to the sender to the new DAO. It will also burn the tokens of the sender according the unspent funds of the DAO.
-    function confirmNewServiceProvider(uint _proposalID, address _newServiceProvider) {}
+    function confirmNewServiceProvider(uint _proposalID, address _newServiceProvider);
 
     /// @notice add new possible recipient `_recipient` for transactions from the DAO (through proposals)
     /// @param _recipient New recipient address
     /// @dev Can only be called by the current service provider
-    function addAllowedAddress(address _recipient) external {}
+    function addAllowedAddress(address _recipient) external;
 
     /// @notice change the depsoit needed to make a proposal to `_proposalDeposit`
     /// @param _proposalDeposit New proposal deposit
-    /// @dev Can only be called by the service provider
-    function changeProposalDeposit(uint _proposalDeposit) external {}
+    function changeProposalDeposit(uint _proposalDeposit) external;
 
     event ProposalAdded(uint proposalID, address recipient, uint amount, string description);
     event Voted(uint proposalID, bool position, address voter);
@@ -103,7 +102,7 @@ contract DAOInterface {
 }
 
 /* The democracy contract itself */
-contract DAO is DAOInterface, Token, Crowdfunding(500000 ether, now + 42 days) {  // I would rather use the dynamic initialization instead of the static one (see construcitor), but doesn't work yet, due to a bug in Solidity
+contract DAO is DAOInterface, Token, Crowdfunding{
 
     /* Contract Variables and events */
     Proposal[] public proposals;
@@ -117,6 +116,8 @@ contract DAO is DAOInterface, Token, Crowdfunding(500000 ether, now + 42 days) {
     uint public proposalDeposit;
 
     DAO_Creator daoCreator;
+    uint splitBalance;
+    //uint splitStartTime;
     
     struct Proposal {
         address recipient;
@@ -151,19 +152,16 @@ contract DAO is DAOInterface, Token, Crowdfunding(500000 ether, now + 42 days) {
         dividends += msg.value;
     }
 
-    // I would rather use the dynamic initialization instead of the static one (see declaration above), but doesn't work yet, due to a bug in Solidity
-    //function DAO(address defaultServiceProvider, DAO_Creator _daoCreator, uint _minValue, uint _closingTime) Crowdfunding(_minValue, _closingTime) {
-    function DAO(address _defaultServiceProvider, DAO_Creator _daoCreator) {
+    function DAO(address _defaultServiceProvider, DAO_Creator _daoCreator, uint _minValue, uint _closingTime) Crowdfunding(_minValue, _closingTime) {
         serviceProvider = _defaultServiceProvider;
         daoCreator = _daoCreator;
         proposalDeposit = 100 ether;
-        allowedRecipients.push(this);  // allow to send transactions to itself, in order to change proposal deposit
     }
 
 
-    function newProposal(address _recipient, uint _etherAmount, string _description, bytes _transactionBytecode, bool _newServiceProvider) onlyShareholders returns (uint _proposalID) {
+    function newProposal(address _recipient, uint _amount, string _description, bytes _transactionBytecode, bool _newServiceProvider) onlyShareholders returns (uint _proposalID) {
         // check sanity
-        if (_newServiceProvider && (_etherAmount != 0 || _transactionBytecode.length != 0 || _recipient == serviceProvider)) {
+        if (_newServiceProvider && (_amount != 0 || _transactionBytecode.length != 0 || _recipient == serviceProvider)) {
             throw;
         }
         else if (!isRecipientAllowed(_recipient)) throw;
@@ -173,17 +171,17 @@ contract DAO is DAOInterface, Token, Crowdfunding(500000 ether, now + 42 days) {
         _proposalID = proposals.length++;
         Proposal p = proposals[_proposalID];
         p.recipient = _recipient;
-        p.amount = _etherAmount;
+        p.amount = _amount;
         p.description = _description;
-        p.proposalHash = sha3(_recipient, _etherAmount, _transactionBytecode);
-        p.votingDeadline = now + debatingPeriod(_newServiceProvider, _etherAmount);
+        p.proposalHash = sha3(_recipient, _amount, _transactionBytecode);
+        p.votingDeadline = now + debatingPeriod(_newServiceProvider, _amount);
         p.openToVote = true;
-        p.proposalPassed = false;
-        p.numberOfVotes = 0;
+        //p.proposalPassed = false; // thats default
+        //p.numberOfVotes = 0;
         p.newServiceProvider = _newServiceProvider;
         p.creator = msg.sender;
         p.proposalDeposit = proposalDeposit;
-        ProposalAdded(_proposalID, _recipient, _etherAmount, _description);
+        ProposalAdded(_proposalID, _recipient, _amount, _description);
         numProposals = _proposalID + 1;
     }
 
@@ -229,18 +227,20 @@ contract DAO is DAOInterface, Token, Crowdfunding(500000 ether, now + 42 days) {
                 nay += voteWeight;            
         }
         // execute result
+
         if (quorum >= minQuorum(p.newServiceProvider, p.amount) && yea > nay ) {
-            p.creator.send(p.proposalDeposit);
+            if (!p.creator.send(p.proposalDeposit)) throw;
             if (p.recipient.call.value(p.amount)(_transactionBytecode)) {
                 p.openToVote = false;
                 p.proposalPassed = true;
                 _success = true;
             }
-        } else if (quorum >= minQuorum(p.newServiceProvider, p.amount) && nay > yea) {
+        } else if (quorum >= minQuorum(p.newServiceProvider, p.amount) && nay >= yea) {
             p.openToVote = false;
             p.proposalPassed = false;
-            p.creator.send(p.proposalDeposit);
+            if (!p.creator.send(p.proposalDeposit)) throw;
         } 
+
         // fire event
         ProposalTallied(_proposalNumber, _success, quorum, p.openToVote);
     }
@@ -250,22 +250,29 @@ contract DAO is DAOInterface, Token, Crowdfunding(500000 ether, now + 42 days) {
         Proposal p = proposals[_proposalNumber];
         // sanity check
         if (now < p.votingDeadline  /* has the voting deadline arrived? */
-            || p.proposalHash != sha3(p.recipient, 0, 0) /* Does the transaction code match the proposal? */
+            || p.proposalHash != sha3(_newServiceProvider, 0, 0) /* Does the transaction code match the proposal? */
             || !p.newServiceProvider // is it a new service provider proposale
-            || p.recipient != _newServiceProvider)
+            || p.recipient != _newServiceProvider) //(not needed)
             throw;
 
-        // if not already happend, create new DAO
-        if (address(p.newDAO) == 0)
+        // if not already happend, create new DAO and store the current balance
+        if (address(p.newDAO) == 0) {
             p.newDAO = createNewDAO(_newServiceProvider);
+            splitBalance = this.balance;
+        }
 
-        uint tokenToBeBurnedAndMoved = (balances[msg.sender] * this.balance) / (totalAmountReceived + dividends);
-
-        // burn Slock tokens
-        balances[msg.sender] -= tokenToBeBurnedAndMoved;
+        // burn tokens
+        uint tokenToBeBurned = (balances[msg.sender] * splitBalance) / (initialAmountReceived + dividends);
+        balances[msg.sender] -= tokenToBeBurned;
 
         // move funds and assign new Tokens
-        p.newDAO.buyTokenProxy.value(tokenToBeBurnedAndMoved)(msg.sender);
+        uint fundsToBeMoved = (balances[msg.sender] * splitBalance) / initialAmountReceived; // initialAmountReceived equals the initial amount of tokens created
+        p.newDAO.buyTokenProxy.value(fundsToBeMoved)(msg.sender);
+        //if (p.newDAO.buyTokenProxy.value(fundsToBeMoved)(msg.sender) == false) throw;
+    }
+
+    function executeSplit(uint _proposalID) {
+
     }
 
 
@@ -282,7 +289,7 @@ contract DAO is DAOInterface, Token, Crowdfunding(500000 ether, now + 42 days) {
 
 
     function isRecipientAllowed(address recipient) internal returns (bool _isAllowed) {
-        if  (recipient == serviceProvider)
+        if  (recipient == serviceProvider || recipient == address(this))
             return true;
         for (uint i = 0; i < allowedRecipients.length; ++i) {
             if (recipient == allowedRecipients[i])
@@ -296,26 +303,26 @@ contract DAO is DAOInterface, Token, Crowdfunding(500000 ether, now + 42 days) {
         if (_newServiceProvider)
             return 61 days;
         else
-            return 1 weeks + (_value * 31 days) / totalAmountReceived;
+            return 1 weeks + (_value * 31 days) / (initialAmountReceived + dividends);
     }
 
 
     function minQuorum(bool _newServiceProvider, uint _value) internal returns (uint _minQuorum) {
         if (_newServiceProvider)
-            return totalAmountReceived / 2;
+            return initialAmountReceived / 2;
         else
-            return totalAmountReceived / 5 + _value / 3;
+            return initialAmountReceived / 5 + _value / 3;
     }
 
 
     function createNewDAO(address _newServiceProvider) internal returns (DAO _newDAO) {
         NewServiceProvider(_newServiceProvider);
-        return daoCreator.createDAO(_newServiceProvider, daoCreator);
+        return daoCreator.createDAO(_newServiceProvider, daoCreator, 0, now + 42 days);
     }
 }
 
 contract DAO_Creator {
-    function createDAO(address _defaultServiceProvider, DAO_Creator _daoCreator) returns (DAO _newDAO) {
-        return new DAO(_defaultServiceProvider, _daoCreator);
+    function createDAO(address _defaultServiceProvider, DAO_Creator _daoCreator, uint _minValue, uint _closingTime) returns (DAO _newDAO) {
+        return new DAO(_defaultServiceProvider, _daoCreator, _minValue, _closingTime);
     }
 }
