@@ -60,8 +60,8 @@ contract Crowdfunding is CrowdfundingInterface, Token {
 
     uint public closingTime;                   // end of crowdfunding
     uint public minValue;                      // minimal goal of crowdfunding
-    uint public initialAmountReceived;           // total amount of received wei in the crowdfunding
-    bool public funded;  
+    uint public initialAmountReceived;         // total amount of received wei in the crowdfunding
+    bool public funded;                        // true if project is funded, false otherwise
 
 
     function Crowdfunding(uint _minValue, uint _closingTime) {
