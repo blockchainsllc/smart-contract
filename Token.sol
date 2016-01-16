@@ -1,7 +1,4 @@
 /*
-This creates a Democractic Autonomous Organization. Membership is based 
-on ownership of custom tokens, which are used to vote on proposals.
-
 This contract is intended for educational purposes, you are fully responsible 
 for compliance with present or future regulations of finance, communications 
 and the universal rights of digital beings.
@@ -29,76 +26,61 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 For more information, please refer to <http://unlicense.org>
 
-*/
 
-/*
 Most, basic default, standardised Token contract. No "pre-mine". Tokens need to be created by a derived contract (e.g. crowdsale)
 
-Original taken from gist.github.com/simondlr/9a9c658d4f5f8c2e88fd
+Original taken from https://github.com/ConsenSys/Tokens/blob/master/Token_Contracts/contracts/Standard_Token.sol
 which is based on standardised APIs: https://github.com/ethereum/wiki/wiki/Standardized_Contract_APIs
-.*/
+*/
 
 /// @title Standard Token Contract.
 
 contract TokenInterface {
-    /// @notice send `_value` token to `_to` from `msg.sender`
-    /// @param _value The amount of token to be transfered
-    /// @param _to The address of the recipient
-    /// @return Whether the transfer was successful or not
-    function transfer(uint _value, address _to) returns (bool _success) {}
 
-    /// @notice send `_value` token to `_to` from `_from`
-    /// @param _value The amount of token to be transfered
-    /// @param _to The address of the recipient
-    /// @param _from The address of the sender
-    /// @return Whether the transfer was successful or not
-    function transferFrom(address _from, uint _value, address _to) returns (bool _success) {}
+    /// @return total amount of tokens
+    function totalSupply() constant returns (uint256 supply) {}
 
-    /// @param _addr The Address from which the balance will be retrieved
+    /// @param _owner The address from which the balance will be retrieved
     /// @return The balance
-    function balanceOf(address _addr) constant returns (uint _r) {}
+    function balanceOf(address _owner) constant returns (uint256 balance) {}
 
-    /// @notice `msg.sender` approves `_addr` to transfer his tokens
-    /// @param _addr The address of the account able to transfer the tokens
+    /// @notice send `_value` token to `_to` from `msg.sender`
+    /// @param _to The address of the recipient
+    /// @param _value The amount of token to be transfered
+    /// @return Whether the transfer was successful or not
+    function transfer(address _to, uint256 _value) returns (bool success) {}
+
+    /// @notice send `_value` token to `_to` from `_from` on the condition it is approved by `_from`
+    /// @param _from The address of the sender
+    /// @param _to The address of the recipient
+    /// @param _value The amount of token to be transfered
+    /// @return Whether the transfer was successful or not
+    function transferFrom(address _from, address _to, uint256 _value) returns (bool success) {}
+
+    /// @notice `msg.sender` approves `_addr` to spend `_value` tokens
+    /// @param _spender The address of the account able to transfer the tokens
+    /// @param _value The amount of wei to be approved for transfer
     /// @return Whether the approval was successful or not
-    function approve(address _addr) returns (bool _success) {}
+    function approve(address _spender, uint256 _value) returns (bool success) {}
 
-    /// @notice `msg.sender` unapproves `_addr` to tranfers his token
-    /// @param _addr The address of the account now unable to transfer the tokens
-    /// @return Whether the unapproval was successful or not
-    function unapprove(address _addr) returns (bool _success) {}
+    /// @param _owner The address of the account owning tokens
+    /// @param _spender The address of the account able to transfer the tokens
+    /// @return Amount of remaining tokens allowed to spent
+    function allowance(address _owner, address _spender) constant returns (uint256 remaining) {}
 
-    /// @param _target The address of the account who gave approval
-    /// @param _proxy The address of the account who has apptoval
-    /// @return Whether `_proxy` has approval to transfer tokens in behalf of `_target` or not
-    function isApprovedFor(address _target, address _proxy) constant returns (bool _r) {}
-
-    /// @notice `msg.sender` approves once that `_maxValue`tokens can be transfered by `_addr`
-    /// @param _addr The address of the account able to transfer the tokens
-    /// @param _maxValue The amount of Token to be approved for transferal
-    /// @return Whether the approval was successful or not
-    function approveOnce(address _addr, uint256 _maxValue) returns (bool _success) {}
-
-    /// @param _target The address of the account who gave a one time approval
-    /// @param _proxy The address of the account who has a one time apptoval
-    /// @return Whether `_proxy` has a one time approval to transfer tokens in behalf of `_target` or not
-    function isApprovedOnceFor(address _target, address _proxy) constant returns (uint _maxValue) {}
-
-    event Transfer(address indexed from, address indexed to, uint256 value);
-    event AddressApproval(address indexed addr, address indexed proxy, bool result);
-    event AddressApprovalOnce(address indexed addr, address indexed proxy, uint256 value);
+    event Transfer(address indexed _from, address indexed _to, uint256 _value);
+    event Approval(address indexed _owner, address indexed _spender, uint256 _value);
 }
 
 contract Token is TokenInterface {
 
-    //explicitly not publicly accessible. Should rely on methods for purpose of standardization.
-    mapping (address => uint) balances;
-    mapping (address => mapping (address => bool)) approved;
-    mapping (address => mapping (address => uint256)) approved_once;
-    
+    mapping (address => uint256) balances;
+    mapping (address => mapping (address => uint256)) allowed;
+    uint256 total_supply;
 
-    function transfer(uint _value, address _to) returns (bool _success) {
-        if (balances[msg.sender] >= _value) {
+    function transfer(address _to, uint256 _value) returns (bool success) {
+        //Default assumes totalSupply can't be over max (2^256 - 1).
+        if (balances[msg.sender] >= _value && _value > 0) {
             balances[msg.sender] -= _value;
             balances[_to] += _value;
             Transfer(msg.sender, _to, _value);
@@ -107,67 +89,37 @@ contract Token is TokenInterface {
         else
             return false;
     }
-    
 
-    function transferFrom(address _from, uint _value, address _to) returns (bool _success) {
-        if (balances[_from] >= _value) {
-            bool transfer = false;
-            if (approved[_from][msg.sender]) {
-                transfer = true;
-            } 
-            else if (_value <= approved_once[_from][msg.sender]) {
-                    transfer = true;
-                    approved_once[_from][msg.sender] = 0; //reset                
-            }
-
-            if (transfer == true) {
-                balances[_from] -= _value;
-                balances[_to] += _value;
-                Transfer(_from, _to, _value);
-                return true;
-            } 
-            else
-                return false;
+    //NOTE: This function suffers from a bug atm. It is a hack. It only works if the calls are arranged as is below.
+    //Here be dragons. Not sure if VM or Solidity bug. More testing needs to be done.
+    //See: https://github.com/ethereum/solidity/issues/281
+    function transferFrom(address _from, address _to, uint256 _value) returns (bool success) {
+        if (balances[_from] >= _value && allowed[_from][msg.sender] >= _value && _value > 0) {
+            balances[_to] += _value;
+            balances[_from] -= _value;
+            allowed[_from][msg.sender] -= _value;
+            Transfer(_from, _to, _value);
+            return true;
         }
         else
             return false;
     }
 
-
-    function balanceOf(address _addr) constant returns (uint _r) {
-        return balances[_addr];
+    function balanceOf(address _owner) constant returns (uint256 balance) {
+        return balances[_owner];
     }
 
-
-    function approve(address _addr) returns (bool _success) {
-        approved[msg.sender][_addr] = true;
-        AddressApproval(msg.sender, _addr, true);
+    function approve(address _spender, uint256 _value) returns (bool success) {
+        allowed[msg.sender][_spender] = _value;
+        Approval(msg.sender, _spender, _value);
         return true;
     }
 
-
-    function unapprove(address _addr) returns (bool _success) {
-        approved[msg.sender][_addr] = false;
-        approved_once[msg.sender][_addr] = 0;
-        //debatable whether to include...
-        AddressApproval(msg.sender, _addr, false);
-        AddressApprovalOnce(msg.sender, _addr, 0);
+    function allowance(address _owner, address _spender) constant returns (uint256 remaining) {
+      return allowed[_owner][_spender];
     }
 
-
-    function isApprovedFor(address _target, address _proxy) constant returns (bool _r) {
-        return approved[_target][_proxy];
-    }
-
-
-    function approveOnce(address _addr, uint256 _maxValue) returns (bool _success) {
-        approved_once[msg.sender][_addr] = _maxValue;
-        AddressApprovalOnce(msg.sender, _addr, _maxValue);
-        return true;
-    }
-
-
-    function isApprovedOnceFor(address _target, address _proxy) constant returns (uint _maxValue) {
-        return approved_once[_target][_proxy];
+    function totalSupply() constant returns (uint256 _total) {
+        return total_supply;
     }
 }
