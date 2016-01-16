@@ -31,15 +31,6 @@ For more information, please refer to <http://unlicense.org>
 
 */
 
-/*
-TODO:
-better debatingPeriod mechanism (based on amount, min, max, ...)
-include tx.data in proposal?
-min quorum / deposit
-
-
-*/
-
 import "Crowdfunding.sol";
 
 contract DAOInterface {
@@ -101,10 +92,10 @@ contract DAOInterface {
     event AllowedRecipientAdded(address _recipient);
 }
 
-/* The democracy contract itself */
+// The DAO contract itself
 contract DAO is DAOInterface, Token, Crowdfunding{
 
-    /* Contract Variables and events */
+    // Contract Variables and events
     Proposal[] public proposals;
     uint public numProposals;
     uint public dividends;
