@@ -236,7 +236,7 @@ contract DAO is DAOInterface, Token, Crowdfunding{
         ProposalTallied(_proposalNumber, _success, quorum, p.openToVote);
     }
 
-
+// this function has some flaws, fix is work in progress
    function confirmNewServiceProvider(uint _proposalNumber, address _newServiceProvider) onlyShareholders {
         Proposal p = proposals[_proposalNumber];
         // sanity check
