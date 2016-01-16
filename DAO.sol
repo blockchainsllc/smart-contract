@@ -98,7 +98,7 @@ contract DAO is DAOInterface, Token, Crowdfunding{
     // Contract Variables and events
     Proposal[] public proposals;
     uint public numProposals;
-    uint public dividends;
+    uint public rewards;
 
     address public serviceProvider;
     address[] public allowedRecipients;
@@ -140,7 +140,7 @@ contract DAO is DAOInterface, Token, Crowdfunding{
 
 
     function getReward() {
-        dividends += msg.value;
+        rewards += msg.value;
     }
 
     function DAO(address _defaultServiceProvider, DAO_Creator _daoCreator, uint _minValue, uint _closingTime) Crowdfunding(_minValue, _closingTime) {
@@ -254,7 +254,7 @@ contract DAO is DAOInterface, Token, Crowdfunding{
         }
 
         // burn tokens
-        uint tokenToBeBurned = (balances[msg.sender] * splitBalance) / (initialAmountReceived + dividends);
+        uint tokenToBeBurned = (balances[msg.sender] * splitBalance) / (initialAmountReceived + rewards);
         balances[msg.sender] -= tokenToBeBurned;
 
         // move funds and assign new Tokens
@@ -295,7 +295,7 @@ contract DAO is DAOInterface, Token, Crowdfunding{
         if (_newServiceProvider)
             return 61 days;
         else
-            return 1 weeks + (_value * 31 days) / (initialAmountReceived + dividends);
+            return 1 weeks + (_value * 31 days) / (initialAmountReceived + rewards);
     }
 
 
