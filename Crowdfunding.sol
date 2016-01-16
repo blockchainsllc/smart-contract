@@ -42,11 +42,11 @@ contract CrowdfundingInterface {
     //  function Crowdfunding(uint _minValue, uint _closingTime); // its commented out only because the constructor can not be overloaded
 
     /// @notice Buy token with `msg.sender` as the beneficiary. One ether creates one token (same base units)
-    function buyToken();
+    function ();
 
     /// @notice Buy token with `_beneficiary` as the beneficiary. One ether creates one token (same base units)
     /// @param _beneficiary The beneficary of for the token bought with ether
-    function buyTokenProxy(address _beneficiary);
+    function buyTokenProxy(address _beneficiary) returns (bool success);
 
     /// @notice Refund `msg.sender` in the case of a not successful crowdfunding
     function refund();
@@ -70,21 +70,23 @@ contract Crowdfunding is CrowdfundingInterface, Token {
     }
 
 
-    function buyToken() {
+    function () {
         buyTokenProxy(msg.sender);
     }
 
 
-    function buyTokenProxy(address _beneficiary) {
-        if (now < closingTime) {
+    function buyTokenProxy(address _beneficiary) returns (bool success) {
+        if (now < closingTime && msg.value > 0) {
             balances[_beneficiary] += msg.value;        
             initialAmountReceived += msg.value;
             SoldToken(_beneficiary, msg.value);
+			success = true;
             if (initialAmountReceived >= minValue && !funded) {
                 funded = true;
                 Funded(initialAmountReceived);
             }
         }
+		return false;
     }
 
 
