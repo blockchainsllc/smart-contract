@@ -139,7 +139,7 @@ contract DAO is DAOInterface, Token, Crowdfunding{
     }
 
 
-    function() {
+    function getReward() {
         dividends += msg.value;
     }
 
@@ -240,9 +240,10 @@ contract DAO is DAOInterface, Token, Crowdfunding{
    function confirmNewServiceProvider(uint _proposalNumber, address _newServiceProvider) onlyShareholders {
         Proposal p = proposals[_proposalNumber];
         // sanity check
-        if (now < p.votingDeadline  /* has the voting deadline arrived? */
-            || p.proposalHash != sha3(_newServiceProvider, 0, 0) /* Does the transaction code match the proposal? */
+        if (now < p.votingDeadline  // has the voting deadline arrived?
+            || p.proposalHash != sha3(_newServiceProvider, 0, 0) // Does the transaction code match the proposal?
             || !p.newServiceProvider // is it a new service provider proposale
+            || msg.sender == address(p.newDAO) // the new DAO can not call this function for various reasons (burn tokens, receive tokens, ...)
             || p.recipient != _newServiceProvider) //(not needed)
             throw;
 
@@ -258,12 +259,12 @@ contract DAO is DAOInterface, Token, Crowdfunding{
 
         // move funds and assign new Tokens
         uint fundsToBeMoved = (balances[msg.sender] * splitBalance) / initialAmountReceived; // initialAmountReceived equals the initial amount of tokens created
-        p.newDAO.buyTokenProxy.value(fundsToBeMoved)(msg.sender);
-        //if (p.newDAO.buyTokenProxy.value(fundsToBeMoved)(msg.sender) == false) throw;
-    }
+        if (p.newDAO.buyTokenProxy.value(fundsToBeMoved).gas(52225)(msg.sender) == false) throw; // TODO test gas costs
 
-    function executeSplit(uint _proposalID) {
-
+        // future rewards (represented by Slock Tokens) belong to new DAO
+        balances[address(p.newDAO)] = balances[msg.sender];
+        Transfer(msg.sender, p.newDAO, balances[msg.sender]);
+        balances[msg.sender] = 0;
     }
 
 
@@ -279,11 +280,11 @@ contract DAO is DAOInterface, Token, Crowdfunding{
     }
 
 
-    function isRecipientAllowed(address recipient) internal returns (bool _isAllowed) {
-        if  (recipient == serviceProvider || recipient == address(this))
+    function isRecipientAllowed(address _recipient) internal returns (bool _isAllowed) {
+        if  (_recipient == serviceProvider || _recipient == address(this))
             return true;
         for (uint i = 0; i < allowedRecipients.length; ++i) {
-            if (recipient == allowedRecipients[i])
+            if (_recipient == allowedRecipients[i])
                 return true;
         }
         return false;
