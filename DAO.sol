@@ -41,22 +41,22 @@ contract DAOInterface {
     /// @param _daoCreator The contract able to (re)create this DAO
     //  function DAO(address _defaultServiceProvider, DAO_Creator _daoCreator);  // its commented out only because the constructor can not be overloaded
 
-    /// @notice `msg.sender` creates a proposal to send `_etherAmount` ether to `_recipient` with the transaction data `_transactionBytecode`. (If this is true: `_newServiceProvider` , then this is a proposal the set `_recipient` as the new service provider)
+    /// @notice `msg.sender` creates a proposal to send `_amount` ether to `_recipient` with the transaction data `_transactionBytecode`. (If this is true: `_newServiceProvider` , then this is a proposal the set `_recipient` as the new service provider)
     /// @param _recipient The address of the recipient of the proposed transaction
-    /// @param _etherAmount The amount of ether (in Wei) to be sent with the proposed transaction
+    /// @param _amount The amount of Wei to be sent with the proposed transaction
     /// @param _description A string descibing the proposal
     /// @param _transactionBytecode The data of the proposed transaction
     /// @param _newServiceProvider A bool defining whether this proposal is about a new service provider or not
     /// @return The proposal ID. Needed for voting on the proposal
-    function newProposal(address _recipient, uint _etherAmount, string _description, bytes _transactionBytecode, bool _newServiceProvider) onlyShareholders returns (uint _proposalID);
+    function newProposal(address _recipient, uint _amount, string _description, bytes _transactionBytecode, bool _newServiceProvider) onlyShareholders returns (uint _proposalID);
 
-    /// @notice Check that the proposal with the ID `_proposalID` matches a transaction which sends `_etherAmount` with this data: `_transactionBytecode` to `_recipient`
+    /// @notice Check that the proposal with the ID `_proposalID` matches a transaction which sends `_amount` with this data: `_transactionBytecode` to `_recipient`
     /// @param _proposalID The proposal ID
     /// @param _recipient The recipient of the proposed transaction
-    /// @param _etherAmount The amount of ether (in Wei) to be sent with the proposed transaction
+    /// @param _amount The amount of Wei to be sent with the proposed transaction
     /// @param _transactionBytecode The data of the proposed transaction
     /// @return Whether the proposal ID matches the transaction data or not
-    function checkProposalCode(uint _proposalID, address _recipient, uint _etherAmount, bytes _transactionBytecode) constant returns (bool _codeChecksOut);
+    function checkProposalCode(uint _proposalID, address _recipient, uint _amount, bytes _transactionBytecode) constant returns (bool _codeChecksOut);
 
     /// @notice Vote on proposal `_proposalID` with `_supportsProposal`
     /// @param _proposalID The proposal ID
@@ -177,9 +177,9 @@ contract DAO is DAOInterface, Token, Crowdfunding{
     }
 
 
-    function checkProposalCode(uint _proposalNumber, address _recipient, uint _etherAmount, bytes _transactionBytecode) constant returns (bool _codeChecksOut) {
+    function checkProposalCode(uint _proposalNumber, address _recipient, uint _amount, bytes _transactionBytecode) constant returns (bool _codeChecksOut) {
         Proposal p = proposals[_proposalNumber];
-        return p.proposalHash == sha3(_recipient, _etherAmount, _transactionBytecode);
+        return p.proposalHash == sha3(_recipient, _amount, _transactionBytecode);
     }
 
 
