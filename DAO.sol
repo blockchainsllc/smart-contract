@@ -225,6 +225,8 @@ contract DAO is DAOInterface, Token, Crowdfunding{
                 p.openToVote = false;
                 p.proposalPassed = true;
                 _success = true;
+            } else {
+                throw; // Without this, the creator of the proposal can repeat this, and get so much fund.
             }
         } else if (quorum >= minQuorum(p.newServiceProvider, p.amount) && nay >= yea) {
             p.openToVote = false;
