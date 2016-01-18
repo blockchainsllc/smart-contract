@@ -41,22 +41,22 @@ contract DAOInterface {
     /// @param _daoCreator The contract able to (re)create this DAO
     //  function DAO(address _defaultServiceProvider, DAO_Creator _daoCreator);  // its commented out only because the constructor can not be overloaded
 
-    /// @notice `msg.sender` creates a proposal to send `_etherAmount` ether to `_recipient` with the transaction data `_transactionBytecode`. (If this is true: `_newServiceProvider` , then this is a proposal the set `_recipient` as the new service provider)
+    /// @notice `msg.sender` creates a proposal to send `_amount` ether to `_recipient` with the transaction data `_transactionBytecode`. (If this is true: `_newServiceProvider` , then this is a proposal the set `_recipient` as the new service provider)
     /// @param _recipient The address of the recipient of the proposed transaction
-    /// @param _etherAmount The amount of ether (in Wei) to be sent with the proposed transaction
+    /// @param _amount The amount of Wei to be sent with the proposed transaction
     /// @param _description A string descibing the proposal
     /// @param _transactionBytecode The data of the proposed transaction
     /// @param _newServiceProvider A bool defining whether this proposal is about a new service provider or not
     /// @return The proposal ID. Needed for voting on the proposal
-    function newProposal(address _recipient, uint _etherAmount, string _description, bytes _transactionBytecode, bool _newServiceProvider) onlyShareholders returns (uint _proposalID);
+    function newProposal(address _recipient, uint _amount, string _description, bytes _transactionBytecode, bool _newServiceProvider) onlyShareholders returns (uint _proposalID);
 
-    /// @notice Check that the proposal with the ID `_proposalID` matches a transaction which sends `_etherAmount` with this data: `_transactionBytecode` to `_recipient`
+    /// @notice Check that the proposal with the ID `_proposalID` matches a transaction which sends `_amount` with this data: `_transactionBytecode` to `_recipient`
     /// @param _proposalID The proposal ID
     /// @param _recipient The recipient of the proposed transaction
-    /// @param _etherAmount The amount of ether (in Wei) to be sent with the proposed transaction
+    /// @param _amount The amount of Wei to be sent with the proposed transaction
     /// @param _transactionBytecode The data of the proposed transaction
     /// @return Whether the proposal ID matches the transaction data or not
-    function checkProposalCode(uint _proposalID, address _recipient, uint _etherAmount, bytes _transactionBytecode) constant returns (bool _codeChecksOut);
+    function checkProposalCode(uint _proposalID, address _recipient, uint _amount, bytes _transactionBytecode) constant returns (bool _codeChecksOut);
 
     /// @notice Vote on proposal `_proposalID` with `_supportsProposal`
     /// @param _proposalID The proposal ID
@@ -93,7 +93,7 @@ contract DAOInterface {
 }
 
 // The DAO contract itself
-contract DAO is DAOInterface, Token, Crowdfunding{
+contract DAO is DAOInterface, Token, Crowdfunding {
 
     // Contract Variables and events
     Proposal[] public proposals;
@@ -177,13 +177,13 @@ contract DAO is DAOInterface, Token, Crowdfunding{
     }
 
 
-    function checkProposalCode(uint _proposalNumber, address _recipient, uint _etherAmount, bytes _transactionBytecode) constant returns (bool _codeChecksOut) {
+    function checkProposalCode(uint _proposalNumber, address _recipient, uint _amount, bytes _transactionBytecode) constant returns (bool _codeChecksOut) {
         Proposal p = proposals[_proposalNumber];
-        return p.proposalHash == sha3(_recipient, _etherAmount, _transactionBytecode);
+        return p.proposalHash == sha3(_recipient, _amount, _transactionBytecode);
     }
 
 
-    function vote(uint _proposalNumber, bool _supportsProposal) onlyShareholders returns (uint _voteID){
+    function vote(uint _proposalNumber, bool _supportsProposal) onlyShareholders returns (uint _voteID) {
         Proposal p = proposals[_proposalNumber];
         if (p.voted[msg.sender] == true) throw;
         
@@ -205,17 +205,17 @@ contract DAO is DAOInterface, Token, Crowdfunding{
 
         // tally the votes
         uint quorum = 0;
-        uint yea = 0; 
+        uint yea = 0;
         uint nay = 0;
         
         for (uint i = 0; i <  p.votes.length; ++i) {
             Vote v = p.votes[i];
-            uint voteWeight = balanceOf(v.voter); 
+            uint voteWeight = balanceOf(v.voter);
             quorum += voteWeight;
             if (v.inSupport)
                 yea += voteWeight;
             else
-                nay += voteWeight;            
+                nay += voteWeight;
         }
         // execute result
 
@@ -225,23 +225,25 @@ contract DAO is DAOInterface, Token, Crowdfunding{
                 p.openToVote = false;
                 p.proposalPassed = true;
                 _success = true;
+            } else {
+                throw; // Without this, the creator of the proposal can repeat this, and get so much fund.
             }
         } else if (quorum >= minQuorum(p.newServiceProvider, p.amount) && nay >= yea) {
             p.openToVote = false;
             p.proposalPassed = false;
             if (!p.creator.send(p.proposalDeposit)) throw;
-        } 
+        }
 
         // fire event
         ProposalTallied(_proposalNumber, _success, quorum, p.openToVote);
     }
 
-   function confirmNewServiceProvider(uint _proposalNumber, address _newServiceProvider) onlyShareholders {
+    function confirmNewServiceProvider(uint _proposalNumber, address _newServiceProvider) onlyShareholders {
         Proposal p = proposals[_proposalNumber];
         // sanity check
         if (now < p.votingDeadline  // has the voting deadline arrived?
             || p.proposalHash != sha3(_newServiceProvider, 0, 0) // Does the transaction code match the proposal?
-            || !p.newServiceProvider // is it a new service provider proposale
+            || !p.newServiceProvider // is it a new service provider proposal
             || msg.sender == address(p.newDAO) // the new DAO can not call this function for various reasons (burn tokens, receive tokens, ...)
             || p.recipient != _newServiceProvider) //(not needed)
             throw;
@@ -280,7 +282,7 @@ contract DAO is DAOInterface, Token, Crowdfunding{
 
 
     function isRecipientAllowed(address _recipient) internal returns (bool _isAllowed) {
-        if  (_recipient == serviceProvider || _recipient == address(this))
+        if (_recipient == serviceProvider || _recipient == address(this))
             return true;
         for (uint i = 0; i < allowedRecipients.length; ++i) {
             if (_recipient == allowedRecipients[i])
