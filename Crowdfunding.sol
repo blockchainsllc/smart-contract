@@ -80,11 +80,11 @@ contract Crowdfunding is CrowdfundingInterface, Token {
             balances[_beneficiary] += msg.value;        
             initialAmountReceived += msg.value;
             SoldToken(_beneficiary, msg.value);
-			success = true;
             if (initialAmountReceived >= minValue && !funded) {
                 funded = true;
                 Funded(initialAmountReceived);
             }
+            return true;
         }
 		return false;
     }
