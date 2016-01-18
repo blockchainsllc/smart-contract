@@ -107,8 +107,6 @@ contract DAO is DAOInterface, Token, Crowdfunding {
     uint public proposalDeposit;
 
     DAO_Creator daoCreator;
-    uint splitBalance;
-    //uint splitStartTime;
     
     struct Proposal {
         address recipient;
@@ -121,6 +119,7 @@ contract DAO is DAOInterface, Token, Crowdfunding {
         bytes32 proposalHash;
         uint proposalDeposit;
         bool newServiceProvider;
+        uint splitBalance;
         DAO newDAO;
         Vote[] votes;
         mapping (address => bool) voted;
@@ -251,15 +250,15 @@ contract DAO is DAOInterface, Token, Crowdfunding {
         // if not already happend, create new DAO and store the current balance
         if (address(p.newDAO) == 0) {
             p.newDAO = createNewDAO(_newServiceProvider);
-            splitBalance = this.balance;
+            p.splitBalance = this.balance;
         }
 
         // burn tokens
-        uint tokenToBeBurned = (balances[msg.sender] * splitBalance) / (initialAmountReceived + rewards);
+        uint tokenToBeBurned = (balances[msg.sender] * p.splitBalance) / (initialAmountReceived + rewards);
         balances[msg.sender] -= tokenToBeBurned;
 
         // move funds and assign new Tokens
-        uint fundsToBeMoved = (balances[msg.sender] * splitBalance) / initialAmountReceived; // initialAmountReceived equals the initial amount of tokens created
+        uint fundsToBeMoved = (balances[msg.sender] * p.splitBalance) / initialAmountReceived; // initialAmountReceived equals the initial amount of tokens created
         if (p.newDAO.buyTokenProxy.value(fundsToBeMoved).gas(52225)(msg.sender) == false) throw; // TODO test gas costs
 
         // future rewards (represented by Slock Tokens) belong to new DAO
