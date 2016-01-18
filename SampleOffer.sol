@@ -16,8 +16,8 @@ contract SampleOffer
     uint dateOfSignature;
     address client; // address of DAO
 
-    uint feeDivisor;
-    uint deploymentFee;
+    uint public feeDivisor;
+    uint public deploymentFee;
 
     modifier callingRestriction {
         if (promiseValid) {
@@ -78,5 +78,13 @@ contract SampleOffer
     function setDeploymentFee(uint _deploymentFee) callingRestriction {
         if (deploymentFee > 100 ether && msg.sender != client) throw; // TODO, set a max defined by service provider, or ideally oracle (set in euro)
         deploymentFee = _deploymentFee;
+    }
+
+    //interface for Slocks
+    function payOneTimeFee() returns(bool) {
+        if (msg.value >= deploymentFee)
+            return true;
+        else
+            throw;
     }
 }
