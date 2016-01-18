@@ -81,7 +81,7 @@ contract DAOInterface {
     /// @dev Can only be called by the current service provider
     function addAllowedAddress(address _recipient) external;
 
-    /// @notice change the depsoit needed to make a proposal to `_proposalDeposit`
+    /// @notice change the deposit needed to make a proposal to `_proposalDeposit`
     /// @param _proposalDeposit New proposal deposit
     function changeProposalDeposit(uint _proposalDeposit) external;
 
