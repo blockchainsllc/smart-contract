@@ -48,7 +48,7 @@ contract SampleOffer
 
     function sign() {
         if (msg.value < totalCosts && dateOfSignature != 0) throw;
-        serviceProvider.send(oneTimeCosts);
+        if (!serviceProvider.send(oneTimeCosts)) throw;
         client = DAO(msg.sender);
         dateOfSignature = now;
         promiseValid = true;
