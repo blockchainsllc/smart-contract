@@ -8,7 +8,6 @@ contract SampleOffer
     uint oneTimeCosts;
     uint dailyCosts;
 
-    bool signed;
     bool promiseValid;
 
     address serviceProvider;
@@ -52,7 +51,6 @@ contract SampleOffer
         serviceProvider.send(oneTimeCosts);
         client = DAO(msg.sender);
         dateOfSignature = now;
-        signed = true;
         promiseValid = true;
     }
 
