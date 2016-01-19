@@ -245,7 +245,7 @@ contract DAO is DAOInterface, Token, Crowdfunding {
         if (now < p.votingDeadline  // has the voting deadline arrived?
             || p.proposalHash != sha3(_newServiceProvider, 0, 0) // Does the transaction code match the proposal?
             || !p.newServiceProvider // is it a new service provider proposal
-            || msg.sender == address(p.newDAO) // the new DAO can not call this function for various reasons (burn tokens, receive tokens, ...)
+           // || msg.sender == address(p.newDAO) // the new DAO can not call this function for various reasons (burn tokens, receive tokens, ...) NEEDS FIXING
             || p.recipient != _newServiceProvider) //(not needed)
             throw;
 
