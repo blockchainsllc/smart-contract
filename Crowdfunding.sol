@@ -85,7 +85,7 @@ contract Crowdfunding is CrowdfundingInterface, Token {
             }
             return true;
         }
-		return false;
+		throw;
     }
 
 
