@@ -264,7 +264,7 @@ contract DAO is DAOInterface, Token, Crowdfunding {
         balances[msg.sender] -= tokenToBeBurned;
 
         // move funds and assign new Tokens
-        uint fundsToBeMoved = (balances[msg.sender] * p.splitBalance) / total_supply; // initialAmountReceived equals the initial amount of tokens created
+        uint fundsToBeMoved = (balances[msg.sender] * p.splitBalance) / total_supply; // total_supply equals the initial amount of tokens created
         if (p.newDAO.buyTokenProxy.value(fundsToBeMoved).gas(52225)(msg.sender) == false) throw; // TODO test gas costs
 
         // future rewards (represented by Slock Tokens) belong to new DAO
