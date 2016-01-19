@@ -59,7 +59,7 @@ contract SampleOffer
         if (dailyCosts < minDailyCosts)
             promiseValid = false;
     }
- function returnRemainingMoney() onlyClient {
+    function returnRemainingMoney() onlyClient {
         if (client.send(this.balance))
             promiseValid = false;        
     }
@@ -81,7 +81,7 @@ contract SampleOffer
         deploymentFee = _deploymentFee;
     }
 
-    //interface for Slocks
+    // interface for Slocks
     function payOneTimeFee() returns(bool) {
         if (msg.value < deploymentFee)
             throw;
@@ -95,7 +95,8 @@ contract SampleOffer
         }
     }
 
-    function payFee() returns(bool) {
+    // pay fee
+    function () returns(bool) {
         if (promiseValid) {
             if (client.getReward.value(msg.value)()) return true;
             else throw;
