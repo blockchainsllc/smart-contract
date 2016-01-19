@@ -60,7 +60,6 @@ contract Crowdfunding is CrowdfundingInterface, Token {
 
     uint public closingTime;                   // end of crowdfunding
     uint public minValue;                      // minimal goal of crowdfunding
-    uint public initialAmountReceived;         // total amount of received wei in the crowdfunding
     bool public funded;                        // true if project is funded, false otherwise
 
 
@@ -78,11 +77,11 @@ contract Crowdfunding is CrowdfundingInterface, Token {
     function buyTokenProxy(address _beneficiary) returns (bool success) {
         if (now < closingTime && msg.value > 0) {
             balances[_beneficiary] += msg.value;        
-            initialAmountReceived += msg.value;
+            total_supply += msg.value;
             SoldToken(_beneficiary, msg.value);
-            if (initialAmountReceived >= minValue && !funded) {
+            if (total_supply >= minValue && !funded) {
                 funded = true;
-                Funded(initialAmountReceived);
+                Funded(total_supply);
             }
             return true;
         }

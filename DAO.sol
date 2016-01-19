@@ -255,11 +255,11 @@ contract DAO is DAOInterface, Token, Crowdfunding {
         }
 
         // burn tokens
-        uint tokenToBeBurned = (balances[msg.sender] * p.splitBalance) / (initialAmountReceived + rewards);
+        uint tokenToBeBurned = (balances[msg.sender] * p.splitBalance) / (total_supply + rewards);
         balances[msg.sender] -= tokenToBeBurned;
 
         // move funds and assign new Tokens
-        uint fundsToBeMoved = (balances[msg.sender] * p.splitBalance) / initialAmountReceived; // initialAmountReceived equals the initial amount of tokens created
+        uint fundsToBeMoved = (balances[msg.sender] * p.splitBalance) / total_supply; // initialAmountReceived equals the initial amount of tokens created
         if (p.newDAO.buyTokenProxy.value(fundsToBeMoved).gas(52225)(msg.sender) == false) throw; // TODO test gas costs
 
         // future rewards (represented by Slock Tokens) belong to new DAO
@@ -296,15 +296,15 @@ contract DAO is DAOInterface, Token, Crowdfunding {
         if (_newServiceProvider)
             return 61 days;
         else
-            return 1 weeks + (_value * 31 days) / (initialAmountReceived + rewards);
+            return 1 weeks + (_value * 31 days) / (total_supply + rewards);
     }
 
 
     function minQuorum(bool _newServiceProvider, uint _value) internal returns (uint _minQuorum) {
         if (_newServiceProvider)
-            return initialAmountReceived / 2;
+            return total_supply / 2;
         else
-            return initialAmountReceived / 5 + _value / 3;
+            return total_supply / 5 + _value / 3;
     }
 
 
