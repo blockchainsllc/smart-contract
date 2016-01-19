@@ -4,6 +4,7 @@ import "SubUser.sol";
 contract SlockitDAO {
     function payOneTimeFee() returns(bool) {}
     function feeDivisor() returns(uint) {}
+    function payFee() returns(bool) {}
 }
 
 contract Slock is SubUser  {
@@ -40,9 +41,9 @@ contract Slock is SubUser  {
         isRented = false;
         isRentable = true;
         isFeeFree = false;
-	}
-	  
-	modifier require(bool _condition)
+    }
+
+    modifier require(bool _condition)
     {
         if (!_condition) throw;
         _
@@ -133,7 +134,7 @@ contract Slock is SubUser  {
         else {
             address dao = 0xff; //to be replaced by the DAO address
             uint divisor = SlockitDAO(dao).feeDivisor();
-            dao.send(cost / divisor);
+            SlockitDAO(dao).payFee.value(cost / divisor)();
             owner.send(cost - cost / divisor ); 
         }
         
@@ -151,7 +152,7 @@ contract Slock is SubUser  {
             else {
                 address dao = 0xff; //to be replaced by the DAO address
                 uint divisor = SlockitDAO(dao).feeDivisor();
-                dao.send(cost / divisor); // TODO make the 1% fee changeable by the DAO
+                SlockitDAO(dao).payFee.value(cost / divisor)();
                 owner.send(cost - cost / divisor ); 
             }
             user = owner;

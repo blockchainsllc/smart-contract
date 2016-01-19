@@ -1,4 +1,7 @@
 //Sample contract
+
+import "DAO.sol";
+
 contract SampleOffer
 {
     uint totalCosts;
@@ -14,14 +17,14 @@ contract SampleOffer
     uint payedOut;
 
     uint dateOfSignature;
-    address client; // address of DAO
+    DAO client; // address of DAO
 
     uint public feeDivisor;
     uint public deploymentFee;
 
     modifier callingRestriction {
         if (promiseValid) {
-            if (msg.sender != client) throw;
+            if (msg.sender != address(client)) throw;
         }
         else
             if (msg.sender != serviceProvider) throw;
@@ -29,7 +32,7 @@ contract SampleOffer
     }
 
     modifier onlyClient {
-        if (msg.sender != client) throw;
+        if (msg.sender != address(client)) throw;
         _
     }
 
@@ -47,7 +50,7 @@ contract SampleOffer
     function sign() {
         if (msg.value < totalCosts && dateOfSignature != 0) throw;
         serviceProvider.send(oneTimeCosts);
-        client = msg.sender;
+        client = DAO(msg.sender);
         dateOfSignature = now;
         signed = true;
         promiseValid = true;
@@ -71,20 +74,37 @@ contract SampleOffer
     }
 
     function setFeeDivisor(uint _feeDivisor) callingRestriction {
-        if (_feeDivisor < 50 && msg.sender != client) throw; // 2%
+        if (_feeDivisor < 50 && msg.sender != address(client)) throw; // 2%
         feeDivisor = _feeDivisor;
     }
 
     function setDeploymentFee(uint _deploymentFee) callingRestriction {
-        if (deploymentFee > 100 ether && msg.sender != client) throw; // TODO, set a max defined by service provider, or ideally oracle (set in euro)
+        if (deploymentFee > 100 ether && msg.sender != address(client)) throw; // TODO, set a max defined by service provider, or ideally oracle (set in euro)
         deploymentFee = _deploymentFee;
     }
 
     //interface for Slocks
     function payOneTimeFee() returns(bool) {
-        if (msg.value >= deploymentFee)
-            return true;
-        else
+        if (msg.value < deploymentFee)
             throw;
+        if (promiseValid) {
+            if (client.getReward.value(msg.value)()) return true;
+            else throw;
+        }
+        else {
+            if (serviceProvider.send(msg.value)) return true;
+            else throw;
+        }
+    }
+
+    function payFee() returns(bool) {
+        if (promiseValid) {
+            if (client.getReward.value(msg.value)()) return true;
+            else throw;
+        }
+        else {
+            if (serviceProvider.send(msg.value)) return true;
+            else throw;
+        }
     }
 }

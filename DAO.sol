@@ -138,8 +138,9 @@ contract DAO is DAOInterface, Token, Crowdfunding {
     }
 
 
-    function getReward() {
+    function getReward() returns(bool) {
         rewards += msg.value;
+		return true;
     }
 
     function DAO(address _defaultServiceProvider, DAO_Creator _daoCreator, uint _minValue, uint _closingTime) Crowdfunding(_minValue, _closingTime) {
