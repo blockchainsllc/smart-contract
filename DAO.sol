@@ -44,7 +44,7 @@ contract DAOInterface {
     /// @notice `msg.sender` creates a proposal to send `_amount` ether to `_recipient` with the transaction data `_transactionBytecode`. (If this is true: `_newServiceProvider` , then this is a proposal the set `_recipient` as the new service provider)
     /// @param _recipient The address of the recipient of the proposed transaction
     /// @param _amount The amount of Wei to be sent with the proposed transaction
-    /// @param _description A string descibing the proposal
+    /// @param _description A string describing the proposal
     /// @param _transactionBytecode The data of the proposed transaction
     /// @param _newServiceProvider A bool defining whether this proposal is about a new service provider or not
     /// @return The proposal ID. Needed for voting on the proposal
@@ -64,7 +64,7 @@ contract DAOInterface {
     /// @return The proposal ID.
     function vote(uint _proposalID, bool _supportsProposal) onlyShareholders returns (uint _voteID);
 
-    /// @notice Checks whether proposal `_proposalID` with transaction data `_transactionBytecode` has been voted for or against it, and executes the transaction in the case it has been voted for.
+    /// @notice Checks whether proposal `_proposalID` with transaction data `_transactionBytecode` has been voted for or rejected, and executes the transaction in the case it has been voted for.
     /// @param _proposalID The proposal ID
     /// @param _transactionBytecode The data of the proposed transaction
     /// @return Whether the proposed transaction has been executed or not
