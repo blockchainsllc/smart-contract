@@ -252,7 +252,7 @@ contract DAO is DAOInterface, Token, Crowdfunding {
         // if not already happend, create new DAO and store the current balance
         if (address(p.newDAO) == 0) {
             p.newDAO = createNewDAO(_newServiceProvider);
-            p.splitBalance = this.balance;
+            p.splitBalance = this.balance - p.proposalDeposit;
         }
 
         if (msg.sender == p.creator && p.creator.send(p.proposalDeposit)){
