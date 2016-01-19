@@ -171,7 +171,7 @@ contract DAO is DAOInterface, Token, Crowdfunding {
         //p.numberOfVotes = 0;
         p.newServiceProvider = _newServiceProvider;
         p.creator = msg.sender;
-        p.proposalDeposit = proposalDeposit;
+        p.proposalDeposit = msg.value;
         ProposalAdded(_proposalID, _recipient, _amount, _description);
         numProposals = _proposalID + 1;
     }
@@ -200,6 +200,7 @@ contract DAO is DAOInterface, Token, Crowdfunding {
         // Check if the proposal can be executed
         if (now < p.votingDeadline  // has the voting deadline arrived?
             || !p.openToVote        // has it been already executed?
+            || p.newServiceProvider // new service provider proposal get confirmed not executed
             || p.proposalHash != sha3(p.recipient, p.amount, _transactionBytecode)) // Does the transaction code match the proposal?
             throw;
 
@@ -254,6 +255,10 @@ contract DAO is DAOInterface, Token, Crowdfunding {
             p.splitBalance = this.balance;
         }
 
+        if (msg.sender == p.creator && p.creator.send(p.proposalDeposit)){
+            p.proposalDeposit = 0;
+        }
+
         // burn tokens
         uint tokenToBeBurned = (balances[msg.sender] * p.splitBalance) / (total_supply + rewards);
         balances[msg.sender] -= tokenToBeBurned;
@@ -276,7 +281,7 @@ contract DAO is DAOInterface, Token, Crowdfunding {
 
 
     function changeProposalDeposit(uint _proposalDeposit) external {
-		if (msg.sender != address(this)) throw;
+		if (msg.sender != address(this) && _proposalDeposit > this.balance / 10) throw;
             proposalDeposit = _proposalDeposit;
     }
 
