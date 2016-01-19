@@ -14,7 +14,7 @@ contract SampleOffer
     address serviceProvider;
     bytes32 hashOfTheContract;
     uint minDailyCosts;
-    uint payedOut;
+    uint paidOut;
 
     uint dateOfSignature;
     DAO client; // address of DAO
@@ -68,9 +68,9 @@ contract SampleOffer
 
     function getMonthlyPayment() {
         if (msg.sender != serviceProvider) throw;
-        uint amount = (now - dateOfSignature) / (1 days) * dailyCosts - payedOut;
+        uint amount = (now - dateOfSignature) / (1 days) * dailyCosts - paidOut;
         if (serviceProvider.send(amount))
-            payedOut += amount;        
+            paidOut += amount;
     }
 
     function setFeeDivisor(uint _feeDivisor) callingRestriction {
