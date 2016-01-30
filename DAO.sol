@@ -1,9 +1,9 @@
 /*
-This creates a Democractic Autonomous Organization. Membership is based 
+This creates a Democractic Autonomous Organization. Membership is based
 on ownership of custom tokens, which are used to vote on proposals.
 
-This contract is intended for educational purposes, you are fully responsible 
-for compliance with present or future regulations of finance, communications 
+This contract is intended for educational purposes, you are fully responsible
+for compliance with present or future regulations of finance, communications
 and the universal rights of digital beings.
 
 Anyone is free to copy, modify, publish, use, compile, sell, or
@@ -41,7 +41,7 @@ contract DAOInterface {
     /// @param _daoCreator The contract able to (re)create this DAO
     //  function DAO(address _defaultServiceProvider, DAO_Creator _daoCreator);  // its commented out only because the constructor can not be overloaded
 
-    /// @notice `msg.sender` creates a proposal to send `_amount` ether to `_recipient` with the transaction data `_transactionBytecode`. (If this is true: `_newServiceProvider` , then this is a proposal the set `_recipient` as the new service provider)
+    /// @notice `msg.sender` creates a proposal to send `_amount` Wei to `_recipient` with the transaction data `_transactionBytecode`. (If this is true: `_newServiceProvider` , then this is a proposal the set `_recipient` as the new service provider)
     /// @param _recipient The address of the recipient of the proposed transaction
     /// @param _amount The amount of Wei to be sent with the proposed transaction
     /// @param _description A string describing the proposal
