@@ -222,13 +222,10 @@ contract DAO is DAOInterface, Token, Crowdfunding {
         // execute result
         if (quorum >= minQuorum(p.newServiceProvider, p.amount) && yea > nay) {
             if (!p.creator.send(p.proposalDeposit)) throw;
-            if (p.recipient.call.value(p.amount)(_transactionBytecode)) {
-                p.openToVote = false;
-                p.proposalPassed = true;
-                _success = true;
-            } else {
-                throw; // Without this, the creator of the proposal can repeat this, and get so much fund.
-            }
+            if (!p.recipient.call.value(p.amount)(_transactionBytecode)) throw;  // Without this throw, the creator of the proposal can repeat this, and get so much fund.
+            p.openToVote = false;
+            p.proposalPassed = true;
+            _success = true;
         } else if (quorum >= minQuorum(p.newServiceProvider, p.amount) && nay >= yea) {
             p.openToVote = false;
             p.proposalPassed = false;
