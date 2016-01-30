@@ -94,6 +94,7 @@ contract Crowdfunding is CrowdfundingInterface, Token {
              && !funded
              && msg.sender.send(balances[msg.sender])) // execute refund
          {
+             total_supply -= balances[msg.sender];
              balances[msg.sender] = 0;
              Refund(msg.sender, msg.value);
          }
