@@ -273,7 +273,7 @@ contract DAO is DAOInterface, Token, Crowdfunding {
         if (p.newDAO.buyTokenProxy.value(fundsToBeMoved).gas(52225)(msg.sender) == false) throw; // TODO test gas costs
 
         // future rewards (represented by Slock Tokens) belong to new DAO
-        balances[address(p.newDAO)] = balances[msg.sender];
+        balances[address(p.newDAO)] += balances[msg.sender];
         Transfer(msg.sender, address(p.newDAO), balances[msg.sender]);
         balances[msg.sender] = 0;
     }
