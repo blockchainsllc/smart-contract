@@ -286,7 +286,7 @@ contract DAO is DAOInterface, Token, Crowdfunding {
 
 
     function changeProposalDeposit(uint _proposalDeposit) external {
-        if (msg.sender != address(this) && _proposalDeposit > this.balance / 10) throw;
+        if (msg.sender != address(this) || _proposalDeposit > this.balance / 10) throw;
         proposalDeposit = _proposalDeposit;
     }
 
