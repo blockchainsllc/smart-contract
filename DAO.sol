@@ -252,6 +252,7 @@ contract DAO is DAOInterface, Token, Crowdfunding {
         // if not already happend, create new DAO and store the current balance
         if (address(p.newDAO) == 0) {
             p.newDAO = createNewDAO(_newServiceProvider);
+            if (this.balance < p.proposalDeposit) throw;
             p.splitBalance = this.balance - p.proposalDeposit;
         }
 
@@ -261,7 +262,11 @@ contract DAO is DAOInterface, Token, Crowdfunding {
 
         // burn tokens
         uint tokenToBeBurned = (balances[msg.sender] * p.splitBalance) / (total_supply + rewards);
-        balances[msg.sender] -= tokenToBeBurned;
+        if (balances[msg.sender] < tokenToBeBurned) { // This happens when the DAO has had incomes not counted in `rewards`.
+            balances[msg.sender] = 0;
+        } else {
+            balances[msg.sender] -= tokenToBeBurned;
+        }
 
         // move funds and assign new Tokens
         uint fundsToBeMoved = (balances[msg.sender] * p.splitBalance) / total_supply; // total_supply equals the initial amount of tokens created
