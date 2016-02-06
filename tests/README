@@ -8,7 +8,7 @@ To unlock these accounts use "Write here a good, randomly generated, passphrase!
 Functionality, each script requires the previous scripts to be run successfully first. 
 
 deploy.js : Deploys the contract. Creates the dao object. inside geth run loadScript("deploy.js")
-fund.js: Finishes the crowd funding by purcahaseing all the tokens. inside geth run loadScript("fund.js")
+fund.js: Finishes the crowd funding by purchasing all the tokens. inside geth run loadScript("fund.js")
 new_prop.js: Creates a new proposal inside the dao. inside geth run inside geth run loadScript("new_prop.js")
 vote.js: Votes on the new proposal. inside geth run loadScript("vote.js")
 

@@ -5,7 +5,7 @@ prop_tx = dao.newProposal.sendTransaction(eth.accounts[0], web3.toWei(100, "ethe
 
 console.log(prop_tx)
 
-console.log("mineing")
+console.log("mining")
 miner.start(1); admin.sleepBlocks(1); miner.stop();
 
 console.log(eth.getTransactionReceipt(prop_tx))

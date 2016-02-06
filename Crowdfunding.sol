@@ -1,5 +1,5 @@
 /*
-This creates a Democractic Autonomous Organization. Membership is based
+This creates a Democratic Autonomous Organization. Membership is based
 on ownership of custom tokens, which are used to vote on proposals.
 
 This contract is intended for educational purposes, you are fully responsible
