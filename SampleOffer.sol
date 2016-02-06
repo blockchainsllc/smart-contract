@@ -1,6 +1,6 @@
 //Sample contract
 
-import "DAO.sol";
+import "./DAO.sol";
 
 contract SampleOffer
 {

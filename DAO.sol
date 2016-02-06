@@ -270,6 +270,13 @@ contract DAO is DAOInterface, Token, Crowdfunding {
         if (p.newDAO.buyTokenProxy.value(fundsToBeMoved).gas(52225)(msg.sender) == false) throw; // TODO test gas costs
 
         // future rewards (represented by Slock Tokens) belong to new DAO
+        // this doesn't work. Token represent a share of the DAO's ether, and a share of the DAO's rewards. But we only want to give the new DAO a share of the rewards, not of the ethers
+		// solutions:
+		// a) 2 Tokens, one for reward, one for share of the money (which one is used to vote? Very confusing to the end user)
+		// b) no reward for splitting off (is this fair?)
+		// c) manage a "reward token" internally in the DAO contract. Adds complexity but solves the problem. Those internal reward "tokens" can not be moved, they only give
+		//    split-DAO the possibility to retireve their reward.
+		// d) we solve that problem later. We can avoids splits by acting as a trustworthy(!=decentralization) whitelist manager
         balances[address(p.newDAO)] += balances[msg.sender];
         Transfer(msg.sender, address(p.newDAO), balances[msg.sender]);
         balances[msg.sender] = 0;

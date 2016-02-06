@@ -33,7 +33,7 @@ For more information, please refer to <http://unlicense.org>
 
 /*Basic crowdsale contract. Allows to sale Tokens for the price of one Ether */
 
-import "Token.sol";
+import "./Token.sol";
 
 contract CrowdfundingInterface {
     /// @dev Constructor setting the minimal target and the end of the crowdsale

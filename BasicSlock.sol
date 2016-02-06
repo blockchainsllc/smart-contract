@@ -1,4 +1,4 @@
-import "SubUser.sol";
+import "./SubUser.sol";
 //import "SlockDAO - deprecated";
 
 contract SlockitDAO {
@@ -6,7 +6,7 @@ contract SlockitDAO {
     function feeDivisor() returns(uint) {}
 }
 
-contract Slock is SubUser  {
+contract Slock is SubUser {
     
     address public owner;
     uint public deposit;
@@ -60,7 +60,8 @@ contract Slock is SubUser  {
         if (msg.sender != owner) throw;
         _
     }
-    
+	
+
     modifier onlyUsers()
     {
         if (msg.sender != user && !isSubUser(msg.sender)) throw;
