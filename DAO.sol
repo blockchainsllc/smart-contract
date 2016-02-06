@@ -31,7 +31,7 @@ For more information, please refer to <http://unlicense.org>
 
 */
 
-import "Crowdfunding.sol";
+import "./Crowdfunding.sol";
 
 contract DAOInterface {
     modifier onlyShareholders {}
@@ -90,10 +90,6 @@ contract DAOInterface {
     event ProposalTallied(uint proposalID, bool result, uint quorum, bool active);
     event NewServiceProvider(address _newServiceProvider);
     event AllowedRecipientAdded(address _recipient);
-}
-
-// The DAO contract itself
-contract DAO is DAOInterface, Token, Crowdfunding {
 
     // Contract Variables and events
     Proposal[] public proposals;
@@ -102,6 +98,9 @@ contract DAO is DAOInterface, Token, Crowdfunding {
 
     address public serviceProvider;
     address[] public allowedRecipients;
+
+    mapping (address => uint256) public rewardRights;  //only used for splits
+    uint public extraRewardRights;
 
     // deposit in Ether to be paid for each proposal
     uint public proposalDeposit;
@@ -130,6 +129,10 @@ contract DAO is DAOInterface, Token, Crowdfunding {
         bool inSupport;
         address voter;
     }
+}
+
+// The DAO contract itself
+contract DAO is DAOInterface, Token, Crowdfunding {
 
     // modifier that allows only shareholders to vote and create new proposals
     modifier onlyShareholders {
@@ -257,11 +260,15 @@ contract DAO is DAOInterface, Token, Crowdfunding {
             p.proposalDeposit = 0;
         }
 
+        Transfer(msg.sender, 0, balances[msg.sender]); // this transfer will happen in 2 steps below
+
         // burn tokens
         uint tokenToBeBurned = (balances[msg.sender] * p.splitBalance) / (total_supply + rewards);
         if (balances[msg.sender] < tokenToBeBurned) { // This happens when the DAO has had incomes not counted in `rewards`.
+            total_supply -= balances[msg.sender];
             balances[msg.sender] = 0;
         } else {
+            total_supply -= tokenToBeBurned;
             balances[msg.sender] -= tokenToBeBurned;
         }
 
@@ -269,16 +276,9 @@ contract DAO is DAOInterface, Token, Crowdfunding {
         uint fundsToBeMoved = (balances[msg.sender] * p.splitBalance) / total_supply; // total_supply equals the initial amount of tokens created
         if (p.newDAO.buyTokenProxy.value(fundsToBeMoved).gas(52225)(msg.sender) == false) throw; // TODO test gas costs
 
-        // future rewards (represented by Slock Tokens) belong to new DAO
-        // this doesn't work. Token represent a share of the DAO's ether, and a share of the DAO's rewards. But we only want to give the new DAO a share of the rewards, not of the ethers
-		// solutions:
-		// a) 2 Tokens, one for reward, one for share of the money (which one is used to vote? Very confusing to the end user)
-		// b) no reward for splitting off (is this fair?)
-		// c) manage a "reward token" internally in the DAO contract. Adds complexity but solves the problem. Those internal reward "tokens" can not be moved, they only give
-		//    split-DAO the possibility to retireve their reward.
-		// d) we solve that problem later. We can avoids splits by acting as a trustworthy(!=decentralization) whitelist manager
-        balances[address(p.newDAO)] += balances[msg.sender];
-        Transfer(msg.sender, address(p.newDAO), balances[msg.sender]);
+        rewardRights[address(p.newDAO)] += balances[msg.sender];
+        extraRewardRights += balances[msg.sender];
+        total_supply -= balances[msg.sender];
         balances[msg.sender] = 0;
     }
 
