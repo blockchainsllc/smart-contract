@@ -37,9 +37,6 @@ which is based on standardised APIs: https://github.com/ethereum/wiki/wiki/Stand
 
 contract TokenInterface {
 
-    /// @return total amount of tokens
-    function totalSupply() constant returns (uint256 supply) {}
-
     /// @param _owner The address from which the balance will be retrieved
     /// @return The balance
     function balanceOf(address _owner) constant returns (uint256 balance) {}
@@ -76,7 +73,7 @@ contract Token is TokenInterface {
 
     mapping (address => uint256) balances;
     mapping (address => mapping (address => uint256)) allowed;
-    uint256 total_supply;
+    uint256 public totalSupply;
 
     function transfer(address _to, uint256 _value) returns (bool success) {
         //Default assumes totalSupply can't be over max (2^256 - 1).
@@ -117,9 +114,5 @@ contract Token is TokenInterface {
 
     function allowance(address _owner, address _spender) constant returns (uint256 remaining) {
       return allowed[_owner][_spender];
-    }
-
-    function totalSupply() constant returns (uint256 _total) {
-        return total_supply;
     }
 }
