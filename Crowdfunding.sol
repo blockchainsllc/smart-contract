@@ -77,11 +77,11 @@ contract Crowdfunding is CrowdfundingInterface, Token {
     function buyTokenProxy(address _beneficiary) returns (bool success) {
         if (now < closingTime && msg.value > 0) {
             balances[_beneficiary] += msg.value;        
-            total_supply += msg.value;
+            totalSupply += msg.value;
             SoldToken(_beneficiary, msg.value);
-            if (total_supply >= minValue && !funded) {
+            if (totalSupply >= minValue && !funded) {
                 funded = true;
-                Funded(total_supply);
+                Funded(totalSupply);
             }
             return true;
         }
