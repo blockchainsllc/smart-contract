@@ -1,9 +1,9 @@
 /*
-This creates a Democractic Autonomous Organization. Membership is based 
+This creates a Democractic Autonomous Organization. Membership is based
 on ownership of custom tokens, which are used to vote on proposals.
 
-This contract is intended for educational purposes, you are fully responsible 
-for compliance with present or future regulations of finance, communications 
+This contract is intended for educational purposes, you are fully responsible
+for compliance with present or future regulations of finance, communications
 and the universal rights of digital beings.
 
 Anyone is free to copy, modify, publish, use, compile, sell, or
@@ -41,7 +41,7 @@ contract DAOInterface {
     /// @param _daoCreator The contract able to (re)create this DAO
     //  function DAO(address _defaultServiceProvider, DAO_Creator _daoCreator);  // its commented out only because the constructor can not be overloaded
 
-    /// @notice `msg.sender` creates a proposal to send `_amount` ether to `_recipient` with the transaction data `_transactionBytecode`. (If this is true: `_newServiceProvider` , then this is a proposal the set `_recipient` as the new service provider)
+    /// @notice `msg.sender` creates a proposal to send `_amount` Wei to `_recipient` with the transaction data `_transactionBytecode`. (If this is true: `_newServiceProvider`, then this is a proposal the set `_recipient` as the new service provider)
     /// @param _recipient The address of the recipient of the proposed transaction
     /// @param _amount The amount of Wei to be sent with the proposed transaction
     /// @param _description A string describing the proposal
@@ -107,7 +107,7 @@ contract DAO is DAOInterface, Token, Crowdfunding {
     uint public proposalDeposit;
 
     DAO_Creator daoCreator;
-    
+
     struct Proposal {
         address recipient;
         uint amount;
@@ -130,7 +130,7 @@ contract DAO is DAOInterface, Token, Crowdfunding {
         bool inSupport;
         address voter;
     }
-    
+
     // modifier that allows only shareholders to vote and create new proposals
     modifier onlyShareholders {
         if (balanceOf(msg.sender) == 0) throw;
@@ -140,7 +140,7 @@ contract DAO is DAOInterface, Token, Crowdfunding {
 
     function getReward() returns(bool) {
         rewards += msg.value;
-		return true;
+        return true;
     }
 
     function DAO(address _defaultServiceProvider, DAO_Creator _daoCreator, uint _minValue, uint _closingTime) Crowdfunding(_minValue, _closingTime) {
@@ -167,7 +167,7 @@ contract DAO is DAOInterface, Token, Crowdfunding {
         p.proposalHash = sha3(_recipient, _amount, _transactionBytecode);
         p.votingDeadline = now + debatingPeriod(_newServiceProvider, _amount);
         p.openToVote = true;
-        //p.proposalPassed = false; // thats default
+        //p.proposalPassed = false; // that's default
         //p.numberOfVotes = 0;
         p.newServiceProvider = _newServiceProvider;
         p.creator = msg.sender;
@@ -186,7 +186,7 @@ contract DAO is DAOInterface, Token, Crowdfunding {
     function vote(uint _proposalNumber, bool _supportsProposal) onlyShareholders returns (uint _voteID) {
         Proposal p = proposals[_proposalNumber];
         if (p.voted[msg.sender] == true) throw;
-        
+
         _voteID = p.votes.length++;
         p.votes[_voteID] = Vote({inSupport: _supportsProposal, voter: msg.sender});
         p.voted[msg.sender] = true;
@@ -208,8 +208,8 @@ contract DAO is DAOInterface, Token, Crowdfunding {
         uint quorum = 0;
         uint yea = 0;
         uint nay = 0;
-        
-        for (uint i = 0; i <  p.votes.length; ++i) {
+
+        for (uint i = 0; i < p.votes.length; ++i) {
             Vote v = p.votes[i];
             uint voteWeight = balanceOf(v.voter);
             quorum += voteWeight;
@@ -218,17 +218,14 @@ contract DAO is DAOInterface, Token, Crowdfunding {
             else
                 nay += voteWeight;
         }
-        // execute result
 
-        if (quorum >= minQuorum(p.newServiceProvider, p.amount) && yea > nay ) {
+        // execute result
+        if (quorum >= minQuorum(p.newServiceProvider, p.amount) && yea > nay) {
             if (!p.creator.send(p.proposalDeposit)) throw;
-            if (p.recipient.call.value(p.amount)(_transactionBytecode)) {
-                p.openToVote = false;
-                p.proposalPassed = true;
-                _success = true;
-            } else {
-                throw; // Without this, the creator of the proposal can repeat this, and get so much fund.
-            }
+            if (!p.recipient.call.value(p.amount)(_transactionBytecode)) throw;  // Without this throw, the creator of the proposal can repeat this, and get so much fund.
+            p.openToVote = false;
+            p.proposalPassed = true;
+            _success = true;
         } else if (quorum >= minQuorum(p.newServiceProvider, p.amount) && nay >= yea) {
             p.openToVote = false;
             p.proposalPassed = false;
@@ -252,37 +249,42 @@ contract DAO is DAOInterface, Token, Crowdfunding {
         // if not already happend, create new DAO and store the current balance
         if (address(p.newDAO) == 0) {
             p.newDAO = createNewDAO(_newServiceProvider);
+            if (this.balance < p.proposalDeposit) throw;
             p.splitBalance = this.balance - p.proposalDeposit;
         }
 
-        if (msg.sender == p.creator && p.creator.send(p.proposalDeposit)){
+        if (msg.sender == p.creator && p.creator.send(p.proposalDeposit)) {
             p.proposalDeposit = 0;
         }
 
         // burn tokens
         uint tokenToBeBurned = (balances[msg.sender] * p.splitBalance) / (total_supply + rewards);
-        balances[msg.sender] -= tokenToBeBurned;
+        if (balances[msg.sender] < tokenToBeBurned) { // This happens when the DAO has had incomes not counted in `rewards`.
+            balances[msg.sender] = 0;
+        } else {
+            balances[msg.sender] -= tokenToBeBurned;
+        }
 
         // move funds and assign new Tokens
         uint fundsToBeMoved = (balances[msg.sender] * p.splitBalance) / total_supply; // total_supply equals the initial amount of tokens created
         if (p.newDAO.buyTokenProxy.value(fundsToBeMoved).gas(52225)(msg.sender) == false) throw; // TODO test gas costs
 
         // future rewards (represented by Slock Tokens) belong to new DAO
-        balances[address(p.newDAO)] = balances[msg.sender];
-        Transfer(msg.sender, p.newDAO, balances[msg.sender]);
+        balances[address(p.newDAO)] += balances[msg.sender];
+        Transfer(msg.sender, address(p.newDAO), balances[msg.sender]);
         balances[msg.sender] = 0;
+    }
+
+
+    function changeProposalDeposit(uint _proposalDeposit) external {
+        if (msg.sender != address(this) || _proposalDeposit > this.balance / 10) throw;
+        proposalDeposit = _proposalDeposit;
     }
 
 
     function addAllowedAddress(address _recipient) external {
         if (msg.sender != serviceProvider) throw;
-            allowedRecipients.push(_recipient);
-    }
-
-
-    function changeProposalDeposit(uint _proposalDeposit) external {
-		if (msg.sender != address(this) && _proposalDeposit > this.balance / 10) throw;
-            proposalDeposit = _proposalDeposit;
+        allowedRecipients.push(_recipient);
     }
 
 
