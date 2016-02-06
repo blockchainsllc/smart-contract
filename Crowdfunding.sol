@@ -69,7 +69,7 @@ contract Crowdfunding is CrowdfundingInterface, Token {
     }
 
 
-    function () {
+    function buyToken() {
         buyTokenProxy(msg.sender);
     }
 
