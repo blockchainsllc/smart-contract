@@ -316,7 +316,7 @@ contract DAO is DAOInterface, Token, Crowdfunding {
 
     function minQuorum(bool _newServiceProvider, uint _value) internal returns (uint _minQuorum) {
         if (_newServiceProvider)
-            return total_supply / 2;
+            throw;
         else
             return total_supply / 5 + _value / 3;
     }
