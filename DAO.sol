@@ -32,25 +32,7 @@ For more information, please refer to <http://unlicense.org>
 */
 
 import "./Crowdfunding.sol";
-
-contract rewardsAccount {
-    DAOInterface dao; // the DAO which wants to pay out rewards
-    uint accumulatedRewards;
-
-    function PayOutRewards(address _dao){
-        dao = DAOInterface(_dao);
-    }
-
-    function(){
-        accumulatedRewards += msg.value;
-    }
-	
-	function payOut(address _recipient, uint _amount) returns (bool){
-		if (msg.sender != address(dao)) throw;
-		_recipient.send(_amount);
-		return true;
-	}
-}
+import "./ManagedAccount.sol";
 
 contract DAOInterface {
     modifier onlyShareholders {}
@@ -104,6 +86,10 @@ contract DAOInterface {
     /// @param _proposalDeposit New proposal deposit
     function changeProposalDeposit(uint _proposalDeposit) external;
 
+    /// @notice get my share of the reward which has been send to `rewardAccount`
+    function getMyReward();
+
+
     event ProposalAdded(uint proposalID, address recipient, uint amount, string description);
     event Voted(uint proposalID, bool position, address voter);
     event ProposalTallied(uint proposalID, bool result, uint quorum, bool active);
@@ -113,16 +99,17 @@ contract DAOInterface {
     // Contract Variables and events
     Proposal[] public proposals;
     uint public numProposals;
+
     uint public rewards;
 
     address public serviceProvider;
     address[] public allowedRecipients;
 
-    mapping (address => uint) public rewardRights;  //only used for splits
-    uint public extraRewardRights;
-	uint public accumulatedRewards;
+    mapping (address => uint) public rewardRights;  //only used for splits, give DAOs without a balance the privilige to access there share of the rewards
+    uint public accumulatedRewardRights;
+
     mapping (address => uint) public payedOut;
-	rewardsAccount public rewardAccount;
+    ManagedAccount public rewardAccount; // account used to manage the rewards which are to be distributed to the Token holders seperately, so they don't appear in `this.balance` 
 
     // deposit in Ether to be paid for each proposal
     uint public proposalDeposit;
@@ -172,6 +159,7 @@ contract DAO is DAOInterface, Token, Crowdfunding {
         serviceProvider = _defaultServiceProvider;
         daoCreator = _daoCreator;
         proposalDeposit = 100 ether;
+        rewardAccount = new ManagedAccount(address(this));
     }
 
 
@@ -245,13 +233,13 @@ contract DAO is DAOInterface, Token, Crowdfunding {
         }
 
         // execute result
-        if (quorum >= minQuorum(p.newServiceProvider, p.amount) && yea > nay) {
+        if (quorum >= minQuorum(p.amount) && yea > nay) {
             if (!p.creator.send(p.proposalDeposit)) throw;
             if (!p.recipient.call.value(p.amount)(_transactionBytecode)) throw;  // Without this throw, the creator of the proposal can repeat this, and get so much fund.
             p.openToVote = false;
             p.proposalPassed = true;
             _success = true;
-        } else if (quorum >= minQuorum(p.newServiceProvider, p.amount) && nay >= yea) {
+        } else if (quorum >= minQuorum(p.amount) && nay >= yea) {
             p.openToVote = false;
             p.proposalPassed = false;
             if (!p.creator.send(p.proposalDeposit)) throw;
@@ -260,6 +248,7 @@ contract DAO is DAOInterface, Token, Crowdfunding {
         // fire event
         ProposalTallied(_proposalNumber, _success, quorum, p.openToVote);
     }
+
 
     function confirmNewServiceProvider(uint _proposalNumber, address _newServiceProvider) onlyShareholders {
         Proposal p = proposals[_proposalNumber];
@@ -285,43 +274,46 @@ contract DAO is DAOInterface, Token, Crowdfunding {
         Transfer(msg.sender, 0, balances[msg.sender]); // this transfer will happen in 2 steps below
 
         // burn tokens
-        uint tokenToBeBurned = (balances[msg.sender] * p.splitBalance) / (total_supply + rewards);
+        uint tokenToBeBurned = (balances[msg.sender] * p.splitBalance) / (totalSupply + rewards);
         if (balances[msg.sender] < tokenToBeBurned) { // This happens when the DAO has had incomes not counted in `rewards`.
-            total_supply -= balances[msg.sender];
+            totalSupply -= balances[msg.sender];
             balances[msg.sender] = 0;
         } else {
-            total_supply -= tokenToBeBurned;
+            totalSupply -= tokenToBeBurned;
             balances[msg.sender] -= tokenToBeBurned;
         }
 
         // move funds and assign new Tokens
-        uint fundsToBeMoved = (balances[msg.sender] * p.splitBalance) / total_supply; // total_supply equals the initial amount of tokens created
+        uint fundsToBeMoved = (balances[msg.sender] * p.splitBalance) / totalSupply; // total_supply equals the initial amount of tokens created
         if (p.newDAO.buyTokenProxy.value(fundsToBeMoved).gas(52225)(msg.sender) == false) throw; // TODO test gas costs
 
         rewardRights[address(p.newDAO)] += balances[msg.sender];
-        extraRewardRights += balances[msg.sender];
-        total_supply -= balances[msg.sender];
+        accumulatedRewardRights += balances[msg.sender];
+        totalSupply -= balances[msg.sender];
         balances[msg.sender] = 0;
     }
-	
-	function getMyReward() {
-        uint total = totalSupply() + extraRewardRights;
-        uint myReward = (balanceOf(msg.sender) + rewardRights[msg.sender]) * accumulatedRewards / total - payedOut[msg.sender];
-		if (rewardAccount.payOut(msg.sender, myReward))
+
+
+    function getMyReward() {
+        uint total = totalSupply + accumulatedRewardRights;
+        uint myReward = (balanceOf(msg.sender) + rewardRights[msg.sender]) * rewardAccount.accumulatedInput() / total - payedOut[msg.sender]; // DANGER - 1024 stackdepth
+        if (rewardAccount.payOut(msg.sender, myReward))
             payedOut[msg.sender] += myReward;
     }
-	
-	function transfer(address _to, uint256 _value) returns (bool success) {
-		return transferFrom(msg.sender, _to, _value);
+
+
+    function transfer(address _to, uint256 _value) returns (bool success) {
+        return transferFrom(msg.sender, _to, _value);
     }
-	
+
+
     function transferFrom(address _from, address _to, uint256 _value) returns (bool success) {
-		uint transferPayedOut = payedOut[_from] * _value / balanceOf(msg.sender);
-		if (super.transferFrom(_from, _to, _value)){			
-			payedOut[_from] -= transferPayedOut;
-			payedOut[_to] += transferPayedOut;			
-		}	
-	}
+        uint transferPayedOut = payedOut[_from] * _value / balanceOf(msg.sender);
+        if (super.transferFrom(_from, _to, _value)){
+            payedOut[_from] -= transferPayedOut;
+            payedOut[_to] += transferPayedOut;
+        }
+    }
 
     function changeProposalDeposit(uint _proposalDeposit) external {
         if (msg.sender != address(this) || _proposalDeposit > this.balance / 10) throw;
@@ -333,15 +325,10 @@ contract DAO is DAOInterface, Token, Crowdfunding {
         if (msg.sender != serviceProvider) throw;
         allowedRecipients.push(_recipient);
     }
-	
-	function setRewardAccount(address _rewardAccount) {
-		if (msg.sender != address(this)) throw;
-		rewardAccount = rewardsAccount(_rewardAccount);
-	}
 
 
     function isRecipientAllowed(address _recipient) internal returns (bool _isAllowed) {
-        if (_recipient == serviceProvider || _recipient == address(this))
+        if (_recipient == serviceProvider || _recipient == address(rewardAccount) || _recipient == address(this))
             return true;
         for (uint i = 0; i < allowedRecipients.length; ++i) {
             if (_recipient == allowedRecipients[i])
@@ -355,15 +342,12 @@ contract DAO is DAOInterface, Token, Crowdfunding {
         if (_newServiceProvider)
             return 61 days;
         else
-            return 1 weeks + (_value * 31 days) / (total_supply + rewards);
+            return 1 weeks + (_value * 31 days) / (totalSupply + rewards);
     }
 
 
-    function minQuorum(bool _newServiceProvider, uint _value) internal returns (uint _minQuorum) {
-        if (_newServiceProvider)
-            return total_supply / 2;
-        else
-            return total_supply / 5 + _value / 3;
+    function minQuorum(uint _value) internal returns (uint _minQuorum) {
+        return totalSupply / 5 + _value / 3;
     }
 
 
