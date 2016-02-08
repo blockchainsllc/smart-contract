@@ -1,7 +1,4 @@
 /*
-This creates a Democratic Autonomous Organization. Membership is based
-on ownership of custom tokens, which are used to vote on proposals.
-
 This contract is intended for educational purposes, you are fully responsible
 for compliance with present or future regulations of finance, communications
 and the universal rights of digital beings.
@@ -77,11 +74,11 @@ contract Crowdfunding is CrowdfundingInterface, Token {
     function buyTokenProxy(address _beneficiary) returns (bool success) {
         if (now < closingTime && msg.value > 0) {
             balances[_beneficiary] += msg.value;
-            total_supply += msg.value;
+            totalSupply += msg.value;
             SoldToken(_beneficiary, msg.value);
-            if (total_supply >= minValue && !funded) {
+            if (totalSupply >= minValue && !funded) {
                 funded = true;
-                Funded(total_supply);
+                Funded(totalSupply);
             }
             return true;
         }
@@ -94,7 +91,7 @@ contract Crowdfunding is CrowdfundingInterface, Token {
              && !funded
              && msg.sender.send(balances[msg.sender])) // execute refund
          {
-             total_supply -= balances[msg.sender];
+             totalSupply -= balances[msg.sender];
              balances[msg.sender] = 0;
              Refund(msg.sender, msg.value);
          }
