@@ -76,21 +76,18 @@ contract Token is TokenInterface {
 
     mapping (address => uint256) balances;
     mapping (address => mapping (address => uint256)) allowed;
-    uint256 total_supply;
+    uint256 public totalSupply;
 
     function transfer(address _to, uint256 _value) returns (bool success) {
-		return transferFrom(msg.sender, _to, _value);
+        return transferFrom(msg.sender, _to, _value);
     }
 
-    //NOTE: This function suffers from a bug atm. It is a hack. It only works if the calls are arranged as is below.
-    //Here be dragons. Not sure if VM or Solidity bug. More testing needs to be done.
-    //See: https://github.com/ethereum/solidity/issues/281
     function transferFrom(address _from, address _to, uint256 _value) returns (bool success) {
-		if (balances[_from] >= _value && (allowed[_from][msg.sender] >= _value || _from == msg.sender) && _value > 0) {
+        if (balances[_from] >= _value && (allowed[_from][msg.sender] >= _value || _from == msg.sender) && _value > 0) {
             balances[_to] += _value;
             balances[_from] -= _value;
-			if (_from != msg.sender)
-            	allowed[_from][msg.sender] -= _value;
+            if (_from != msg.sender)
+                allowed[_from][msg.sender] -= _value;
             Transfer(_from, _to, _value);
             return true;
         }
@@ -110,9 +107,5 @@ contract Token is TokenInterface {
 
     function allowance(address _owner, address _spender) constant returns (uint256 remaining) {
       return allowed[_owner][_spender];
-    }
-
-    function totalSupply() constant returns (uint256 _total) {
-        return total_supply;
     }
 }
