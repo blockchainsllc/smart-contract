@@ -102,10 +102,9 @@ contract DAOInterface is TokenInterface {
     }
 }
 
-contract PayOutRewards {
+contract rewardsAccount {
     DAOInterface dao; // the DAO which wants to pay out rewards
     uint accumulatedRewards;
-    mapping (address => uint256) public payedOut;
 
     function PayOutRewards(address _dao){
         dao = DAOInterface(_dao);
@@ -114,11 +113,10 @@ contract PayOutRewards {
     function(){
         accumulatedRewards += msg.value;
     }
-
-    function getMyReward() {
-        uint total = dao.totalSupply() + dao.extraRewardRights();
-        uint myReward = (dao.balanceOf(msg.sender) + dao.rewardRights(msg.sender)) * accumulatedRewards / total - payedOut[msg.sender];
-        if (msg.sender.send(myReward))
-            payedOut[msg.sender] += myReward;
-    }
+	
+	function payOut(address _recipient, uint _amount) returns (bool){
+		if (msg.sender != address(dao)) throw;
+		_recipient.send(_amount);
+		return true;
+	}
 }

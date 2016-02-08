@@ -33,6 +33,25 @@ For more information, please refer to <http://unlicense.org>
 
 import "./Crowdfunding.sol";
 
+contract rewardsAccount {
+    DAOInterface dao; // the DAO which wants to pay out rewards
+    uint accumulatedRewards;
+
+    function PayOutRewards(address _dao){
+        dao = DAOInterface(_dao);
+    }
+
+    function(){
+        accumulatedRewards += msg.value;
+    }
+	
+	function payOut(address _recipient, uint _amount) returns (bool){
+		if (msg.sender != address(dao)) throw;
+		_recipient.send(_amount);
+		return true;
+	}
+}
+
 contract DAOInterface {
     modifier onlyShareholders {}
 
@@ -99,13 +118,16 @@ contract DAOInterface {
     address public serviceProvider;
     address[] public allowedRecipients;
 
-    mapping (address => uint256) public rewardRights;  //only used for splits
+    mapping (address => uint) public rewardRights;  //only used for splits
     uint public extraRewardRights;
+	uint public accumulatedRewards;
+    mapping (address => uint) public payedOut;
+	rewardsAccount public rewardAccount;
 
     // deposit in Ether to be paid for each proposal
     uint public proposalDeposit;
 
-    DAO_Creator daoCreator;
+    DAO_Creator public daoCreator;
 
     struct Proposal {
         address recipient;
@@ -281,7 +303,25 @@ contract DAO is DAOInterface, Token, Crowdfunding {
         total_supply -= balances[msg.sender];
         balances[msg.sender] = 0;
     }
-
+	
+	function getMyReward() {
+        uint total = totalSupply() + extraRewardRights;
+        uint myReward = (balanceOf(msg.sender) + rewardRights[msg.sender]) * accumulatedRewards / total - payedOut[msg.sender];
+		if (rewardAccount.payOut(msg.sender, myReward))
+            payedOut[msg.sender] += myReward;
+    }
+	
+	function transfer(address _to, uint256 _value) returns (bool success) {
+		return transferFrom(msg.sender, _to, _value);
+    }
+	
+    function transferFrom(address _from, address _to, uint256 _value) returns (bool success) {
+		uint transferPayedOut = payedOut[_from] * _value / balanceOf(msg.sender);
+		if (super.transferFrom(_from, _to, _value)){			
+			payedOut[_from] -= transferPayedOut;
+			payedOut[_to] += transferPayedOut;			
+		}	
+	}
 
     function changeProposalDeposit(uint _proposalDeposit) external {
         if (msg.sender != address(this) || _proposalDeposit > this.balance / 10) throw;
@@ -293,6 +333,11 @@ contract DAO is DAOInterface, Token, Crowdfunding {
         if (msg.sender != serviceProvider) throw;
         allowedRecipients.push(_recipient);
     }
+	
+	function setRewardAccount(address _rewardAccount) {
+		if (msg.sender != address(this)) throw;
+		rewardAccount = rewardsAccount(_rewardAccount);
+	}
 
 
     function isRecipientAllowed(address _recipient) internal returns (bool _isAllowed) {

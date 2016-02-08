@@ -79,25 +79,18 @@ contract Token is TokenInterface {
     uint256 total_supply;
 
     function transfer(address _to, uint256 _value) returns (bool success) {
-        //Default assumes totalSupply can't be over max (2^256 - 1).
-        if (balances[msg.sender] >= _value && _value > 0) {
-            balances[msg.sender] -= _value;
-            balances[_to] += _value;
-            Transfer(msg.sender, _to, _value);
-            return true;
-        }
-        else
-            return false;
+		return transferFrom(msg.sender, _to, _value);
     }
 
     //NOTE: This function suffers from a bug atm. It is a hack. It only works if the calls are arranged as is below.
     //Here be dragons. Not sure if VM or Solidity bug. More testing needs to be done.
     //See: https://github.com/ethereum/solidity/issues/281
     function transferFrom(address _from, address _to, uint256 _value) returns (bool success) {
-        if (balances[_from] >= _value && allowed[_from][msg.sender] >= _value && _value > 0) {
+		if (balances[_from] >= _value && (allowed[_from][msg.sender] >= _value || _from == msg.sender) && _value > 0) {
             balances[_to] += _value;
             balances[_from] -= _value;
-            allowed[_from][msg.sender] -= _value;
+			if (_from != msg.sender)
+            	allowed[_from][msg.sender] -= _value;
             Transfer(_from, _to, _value);
             return true;
         }
