@@ -57,7 +57,7 @@ contract TokenInterface {
     /// @return Whether the transfer was successful or not
     function transferFrom(address _from, address _to, uint256 _value) returns (bool success) {}
 
-    /// @notice `msg.sender` approves `_addr` to spend `_value` tokens
+    /// @notice `msg.sender` approves `_spender` to spend `_value` tokens on his behalf
     /// @param _spender The address of the account able to transfer the tokens
     /// @param _value The amount of tokens to be approved for transfer
     /// @return Whether the approval was successful or not
@@ -65,7 +65,7 @@ contract TokenInterface {
 
     /// @param _owner The address of the account owning tokens
     /// @param _spender The address of the account able to transfer the tokens
-    /// @return Amount of remaining tokens allowed to spent
+    /// @return Amount of remaining tokens of _owner that _spender is allowed to spend
     function allowance(address _owner, address _spender) constant returns (uint256 remaining) {}
 
     event Transfer(address indexed _from, address indexed _to, uint256 _value);
@@ -83,7 +83,7 @@ contract Token is TokenInterface {
     }
 
     function transferFrom(address _from, address _to, uint256 _value) returns (bool success) {
-        if (balances[_from] >= _value && (allowed[_from][msg.sender] >= _value || _from == msg.sender) && _value > 0) {
+        if (balances[_from] >= _value && (_from == msg.sender || allowed[_from][msg.sender] >= _value) && _value > 0) {
             balances[_to] += _value;
             balances[_from] -= _value;
             if (_from != msg.sender)
