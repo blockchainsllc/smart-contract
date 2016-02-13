@@ -77,8 +77,8 @@ contract Slock is SubUser {
     function setPrice(uint _price) onlyOwner noMoney {
         price = _price;
     }
-    
-    function setTimeBlock(uint _timeBlock) onlyOwner noMoney {
+
+    function setTimeBlock(uint _timeBlock) onlyOwner noMoney require(_timeBlock != 0) {
         timeBlock = _timeBlock;
     }
     
