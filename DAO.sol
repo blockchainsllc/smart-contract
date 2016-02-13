@@ -218,19 +218,18 @@ contract DAO is DAOInterface, Token, Crowdfunding {
             throw;
 
         // tally the votes
-        uint quorum = 0;
         uint yea = 0;
         uint nay = 0;
 
         for (uint i = 0; i < p.votes.length; ++i) {
             Vote v = p.votes[i];
             uint voteWeight = balanceOf(v.voter);
-            quorum += voteWeight;
             if (v.inSupport)
                 yea += voteWeight;
             else
                 nay += voteWeight;
         }
+        uint quorum = yea + nay;
 
         // execute result
         if (quorum >= minQuorum(p.amount) && yea > nay) {
