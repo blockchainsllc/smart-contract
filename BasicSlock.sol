@@ -121,8 +121,8 @@ contract Slock is SubUser {
         openTime = block.timestamp;
         isRented = true;
     }
-    
-    function returnIt() onlyUser noMoney {
+
+    function returnIt() onlyUser require(isRented) noMoney {
         uint cost = costs();
         if (cost > deposit)
             cost = deposit;
