@@ -91,10 +91,10 @@ contract DAOInterface {
 
 
     event ProposalAdded(uint proposalID, address recipient, uint amount, string description);
-    event Voted(uint proposalID, bool position, address voter);
+    event Voted(uint proposalID, bool position, address indexed voter);
     event ProposalTallied(uint proposalID, bool result, uint quorum, bool active);
     event NewServiceProvider(address _newServiceProvider);
-    event AllowedRecipientAdded(address _recipient);
+    event AllowedRecipientAdded(address indexed _recipient);
 
     // Contract Variables and events
     Proposal[] public proposals;
