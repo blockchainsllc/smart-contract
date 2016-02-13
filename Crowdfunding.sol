@@ -49,8 +49,8 @@ contract CrowdfundingInterface {
     function refund();
 
     event Funded(uint value);
-    event SoldToken(address to, uint value);
-    event Refund(address to, uint value);
+    event SoldToken(address indexed to, uint value);
+    event Refund(address indexed to, uint value);
 }
 
 contract Crowdfunding is CrowdfundingInterface, Token {

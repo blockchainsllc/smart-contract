@@ -10,10 +10,10 @@
     uint constant c_maxsubUsers = 250;
     // index on the list of subUsers to allow reverse lookup
     mapping(uint => uint) m_subUserIndex;
-     
-    event SubUserChanged(address oldOwner, address newOwner);
-    event SubUserAdded(address newOwner);
-    event SubUserRemoved(address oldOwner);
+
+    event SubUserChanged(address indexed oldOwner, address indexed newOwner);
+    event SubUserAdded(address indexed newOwner);
+    event SubUserRemoved(address indexed oldOwner);
 
     function SubUser() {
 	    user = msg.sender;

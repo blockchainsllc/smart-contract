@@ -23,7 +23,7 @@ contract Slock is SubUser {
     
     event Open();
     event Close();
-    event Rent(address _user);
+    event Rent(address indexed _user);
     event Return();
 
     function Slock(uint _deposit, uint _price, uint _timeBlock) SubUser() {
