@@ -160,6 +160,7 @@ contract DAO is DAOInterface, Token, Crowdfunding {
         daoCreator = _daoCreator;
         proposalDeposit = 100 ether;
         rewardAccount = new ManagedAccount(address(this));
+        if (address(rewardAccount) == 0) throw;
     }
 
 
@@ -262,6 +263,7 @@ contract DAO is DAOInterface, Token, Crowdfunding {
         // if not already happend, create new DAO and store the current balance
         if (address(p.newDAO) == 0) {
             p.newDAO = createNewDAO(_newServiceProvider);
+            if (address(p.newDAO) == 0) throw; // Call depth limit reached, etc.
             if (this.balance < p.proposalDeposit) throw;
             p.splitBalance = this.balance - p.proposalDeposit;
         }
