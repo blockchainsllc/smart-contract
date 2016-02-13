@@ -106,7 +106,7 @@ contract DAOInterface {
     address[] public allowedRecipients;
 
     mapping (address => uint) public rewardRights;  //only used for splits, give DAOs without a balance the privilige to access there share of the rewards
-    uint public accumulatedRewardRights;
+    uint public totalRewardRights;
 
     mapping (address => uint) public payedOut;
     ManagedAccount public rewardAccount; // account used to manage the rewards which are to be distributed to the Token holders seperately, so they don't appear in `this.balance` 
@@ -287,14 +287,14 @@ contract DAO is DAOInterface, Token, Crowdfunding {
         if (p.newDAO.buyTokenProxy.value(fundsToBeMoved).gas(52225)(msg.sender) == false) throw; // TODO test gas costs
 
         rewardRights[address(p.newDAO)] += balances[msg.sender];
-        accumulatedRewardRights += balances[msg.sender];
+        totalRewardRights += balances[msg.sender];
         totalSupply -= balances[msg.sender];
         balances[msg.sender] = 0;
     }
 
 
     function getMyReward() {
-        uint total = totalSupply + accumulatedRewardRights;
+        uint total = totalSupply + totalRewardRights;
         uint myReward = (balanceOf(msg.sender) + rewardRights[msg.sender]) * rewardAccount.accumulatedInput() / total - payedOut[msg.sender]; // DANGER - 1024 stackdepth
         if (rewardAccount.payOut(msg.sender, myReward))
             payedOut[msg.sender] += myReward;
