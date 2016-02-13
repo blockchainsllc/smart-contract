@@ -77,8 +77,8 @@ contract Slock is SubUser {
     function setPrice(uint _price) onlyOwner noMoney {
         price = _price;
     }
-    
-    function setTimeBlock(uint _timeBlock) onlyOwner noMoney {
+
+    function setTimeBlock(uint _timeBlock) onlyOwner noMoney require(_timeBlock != 0) {
         timeBlock = _timeBlock;
     }
     
@@ -121,8 +121,8 @@ contract Slock is SubUser {
         openTime = block.timestamp;
         isRented = true;
     }
-    
-    function returnIt() onlyUser noMoney {
+
+    function returnIt() onlyUser require(isRented) noMoney {
         uint cost = costs();
         if (cost > deposit)
             cost = deposit;
@@ -148,14 +148,16 @@ contract Slock is SubUser {
         uint cost = costs();
         if (cost > deposit){
             if (isFeeFree)
-                owner.send(cost);
+                owner.send(deposit);
             else {
                 address dao = 0xff; //to be replaced by the DAO address
                 uint divisor = SlockitDAO(dao).feeDivisor();
-                dao.send(cost / divisor);
-                owner.send(cost - cost / divisor ); 
+                dao.send(deposit / divisor);
+                owner.send(deposit - deposit / divisor );
             }
             user = owner;
+            isRented = false;
+            Close();
         }
     }
 }
