@@ -29,7 +29,7 @@
     }
     
     function isAUser(address _addr) returns (bool) {
-        return msg.sender == user || isSubUser(_addr);
+        return _addr == user || isSubUser(_addr);
     }
 
     // Replaces an subUser `_from` with another `_to`.
