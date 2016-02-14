@@ -266,7 +266,7 @@ contract DAO is DAOInterface, Token, Crowdfunding {
             p.splitBalance = this.balance - p.proposalDeposit;
         }
 
-        if (msg.sender == p.creator && p.creator.send(p.proposalDeposit)) {
+        if (msg.sender == p.creator && p.proposalDeposit > 0 && p.creator.send(p.proposalDeposit)) {
             p.proposalDeposit = 0;
         }
 
@@ -296,8 +296,8 @@ contract DAO is DAOInterface, Token, Crowdfunding {
     function getMyReward() {
         uint total = totalSupply + totalRewardRights;
         uint myReward = (balanceOf(msg.sender) + rewardRights[msg.sender]) * rewardAccount.accumulatedInput() / total - payedOut[msg.sender]; // DANGER - 1024 stackdepth
-        if (rewardAccount.payOut(msg.sender, myReward))
-            payedOut[msg.sender] += myReward;
+        if (!rewardAccount.payOut(msg.sender, myReward)) throw;
+        payedOut[msg.sender] += myReward;
     }
 
 
