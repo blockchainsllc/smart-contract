@@ -59,7 +59,7 @@ contract TokenInterface {
     /// @return Whether the transfer was successful or not
     function transferFrom(address _from, address _to, uint256 _value) returns (bool success);
 
-    /// @notice `msg.sender` approves `_spender` to spend `_value` tokens on his behalf
+    /// @notice `msg.sender` approves `_spender` to spend `_value` tokens on its behalf
     /// @param _spender The address of the account able to transfer the tokens
     /// @param _value The amount of tokens to be approved for transfer
     /// @return Whether the approval was successful or not

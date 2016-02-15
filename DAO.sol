@@ -35,27 +35,6 @@ import "./Crowdfunding.sol";
 import "./ManagedAccount.sol";
 
 contract DAOInterface {
-
-	// Contract Variables and events
-    Proposal[] public proposals;
-    uint public numProposals; //is this needed? can I use proposals.length instead?
-
-    uint public rewards;
-
-    address public serviceProvider;
-    address[] public allowedRecipients;
-
-    mapping (address => uint) public rewardRights;  //only used for splits, give DAOs without a balance the privilige to access there share of the rewards
-    uint public accumulatedRewardRights;
-
-    mapping (address => uint) public payedOut;
-    ManagedAccount public rewardAccount; // account used to manage the rewards which are to be distributed to the Token holders seperately, so they don't appear in `this.balance` 
-
-    // deposit in Ether to be paid for each proposal
-    uint public proposalDeposit;
-
-    DAO_Creator public daoCreator;
-
     modifier onlyShareholders {}
 
     /// @dev Constructor setting the default service provider and the address for the contract able to create another DAO
@@ -117,26 +96,66 @@ contract DAOInterface {
     event NewServiceProvider(address _newServiceProvider);
     event AllowedRecipientAdded(address indexed _recipient);
 
+    // Contract Variables and events
+    Proposal[] public proposals;
+    uint public numProposals;
+
+    uint public rewards;
+
+    address public serviceProvider;
+    address[] public allowedRecipients;
+
+
+    //only used for splits, give DAOs without a balance the privilige to access their share of the rewards
+    mapping (address => uint) public rewardRights;
+    uint public totalRewardRights;
+
+
+    mapping (address => uint) public payedOut;
+    // account used to manage the rewards which are to be distributed to the Token holders seperately, so they don't appear in `this.balance`
+    ManagedAccount public rewardAccount;
+
+    // deposit in Ether to be paid for each proposal
+    uint public proposalDeposit;
+
+    DAO_Creator public daoCreator;
+
     struct Proposal {
+        // The address where the `amount` will go to if the proposal is accepted.
         address recipient;
+        // The amount to transfer to `recipient` if the proposal is accepted.
         uint amount;
+        // A plain text description of the proposal
         string description;
+        // a Unix timestamp, denoting the end of the voting period
         uint votingDeadline;
+        // True if the proposal is open for voting, false if it has already been voted for/against
         bool openToVote;
+        // True if the porposal has been voted for, False if voted against
         bool proposalPassed;
         uint numberOfVotes;
+        // A hash to check validity of a proposal. Equal to sha3(_recipient, _amount, _transactionBytecode)
         bytes32 proposalHash;
+        // The deposit in ether the creator puts in the proposal. Is taken as the msg.value of a newProposal call
         uint proposalDeposit;
+        // True if this proposal is to assign a new service provider
         bool newServiceProvider;
+        // Used only in the case of a newServiceProvider proposal. Is the balance of the old DAO minus the deposit.
         uint splitBalance;
+        // Used only in the case of a newServiceProvider porposal. Represents the new DAO contract.
         DAO newDAO;
+        // Array holding all votes that have taken place on the proposal
         Vote[] votes;
+        // Simple mapping to check if a shareholder has already cast a vote
         mapping (address => bool) voted;
+        // Address of the shareholder who created the proposal
         address creator;
     }
 
     struct Vote {
+        // True for 'yay', False for 'nay'
         bool inSupport;
+        // The address of the voter
         address voter;
     }
 }
@@ -161,6 +180,7 @@ contract DAO is DAOInterface, Token, Crowdfunding {
         daoCreator = _daoCreator;
         proposalDeposit = 100 ether;
         rewardAccount = new ManagedAccount(address(this));
+        if (address(rewardAccount) == 0) throw;
     }
 
 
@@ -261,14 +281,15 @@ contract DAO is DAOInterface, Token, Crowdfunding {
             || p.recipient != _newServiceProvider) //(not needed)
             throw;
 
-        // if not already happend, create new DAO and store the current balance
+        // if not already happened, create new DAO and store the current balance
         if (address(p.newDAO) == 0) {
             p.newDAO = createNewDAO(_newServiceProvider);
+            if (address(p.newDAO) == 0) throw; // Call depth limit reached, etc.
             if (this.balance < p.proposalDeposit) throw;
             p.splitBalance = this.balance - p.proposalDeposit;
         }
 
-        if (msg.sender == p.creator && p.creator.send(p.proposalDeposit)) {
+        if (msg.sender == p.creator && p.proposalDeposit > 0 && p.creator.send(p.proposalDeposit)) {
             p.proposalDeposit = 0;
         }
 
@@ -276,7 +297,7 @@ contract DAO is DAOInterface, Token, Crowdfunding {
 
         // burn tokens
         uint tokenToBeBurned = (balances[msg.sender] * p.splitBalance) / (totalSupply + rewards);
-        if (balances[msg.sender] < tokenToBeBurned) { // This happens when the DAO has had incomes not counted in `rewards`.
+        if (balances[msg.sender] < tokenToBeBurned) { // This happens when the DAO has had income not counted in `rewards`.
             totalSupply -= balances[msg.sender];
             balances[msg.sender] = 0;
         } else {
@@ -285,21 +306,21 @@ contract DAO is DAOInterface, Token, Crowdfunding {
         }
 
         // move funds and assign new Tokens
-        uint fundsToBeMoved = (balances[msg.sender] * p.splitBalance) / totalSupply; // total_supply represents the sum of unsplit tokens
+        uint fundsToBeMoved = (balances[msg.sender] * p.splitBalance) / totalSupply; // totalSupply represents the sum of unsplit tokens
         if (p.newDAO.buyTokenProxy.value(fundsToBeMoved).gas(52225)(msg.sender) == false) throw; // TODO test gas costs
 
         rewardRights[address(p.newDAO)] += balances[msg.sender];
-        accumulatedRewardRights += balances[msg.sender];
+        totalRewardRights += balances[msg.sender];
         totalSupply -= balances[msg.sender];
         balances[msg.sender] = 0;
     }
 
 
     function getMyReward() {
-        uint total = totalSupply + accumulatedRewardRights;
+        uint total = totalSupply + totalRewardRights;
         uint myReward = (balanceOf(msg.sender) + rewardRights[msg.sender]) * rewardAccount.accumulatedInput() / total - payedOut[msg.sender]; // DANGER - 1024 stackdepth
-        if (rewardAccount.payOut(msg.sender, myReward))
-            payedOut[msg.sender] += myReward;
+        if (!rewardAccount.payOut(msg.sender, myReward)) throw;
+        payedOut[msg.sender] += myReward;
     }
 
 

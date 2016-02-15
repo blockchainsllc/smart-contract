@@ -3,7 +3,7 @@ import "./SubUser.sol";
 
 contract SlockitDAO {
     function payOneTimeFee() returns(bool) {}
-    function feeDivisor() returns(uint) {}
+    function feeDivisor() const returns(uint) {}
 }
 
 contract Slock is SubUser {

@@ -1,5 +1,5 @@
- contract SubUser {
-     
+contract SubUser {
+
     address public user;
 
     // pointer used to find a free slot in m_subUsers
@@ -16,7 +16,7 @@
     event SubUserRemoved(address indexed oldOwner);
 
     function SubUser() {
-	    user = msg.sender;
+        user = msg.sender;
     }
 
     modifier onlyUser {
@@ -27,12 +27,12 @@
     function isSubUser(address _addr) returns (bool) {
         return m_subUserIndex[uint(_addr)] > 0;
     }
-    
+
     function isAUser(address _addr) returns (bool) {
         return _addr == user || isSubUser(_addr);
     }
 
-    // Replaces an subUser `_from` with another `_to`.
+    // Replaces a subUser `_from` with another `_to`.
     function changeSubUser(address _from, address _to) onlyUser external {
         if (isSubUser(_to)) return;
         uint subUserIndex = m_subUserIndex[uint(_from)];
@@ -65,6 +65,7 @@
         reorganizeSubUsers(); //make sure m_numsubUser is equal to the number of subUsers and always points to the optimal free slot
         SubUserRemoved(_subUser);
     }
+
     function removeAllSubUsers() internal {
         for (var i = 1; i <= m_numSubUsers; i++)
             m_subUserIndex[m_subUsers[i]] = 0;
