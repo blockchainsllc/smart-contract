@@ -35,6 +35,27 @@ import "./Crowdfunding.sol";
 import "./ManagedAccount.sol";
 
 contract DAOInterface {
+
+	// Contract Variables and events
+    Proposal[] public proposals;
+    uint public numProposals; //is this needed? can I use proposals.length instead?
+
+    uint public rewards;
+
+    address public serviceProvider;
+    address[] public allowedRecipients;
+
+    mapping (address => uint) public rewardRights;  //only used for splits, give DAOs without a balance the privilige to access there share of the rewards
+    uint public accumulatedRewardRights;
+
+    mapping (address => uint) public payedOut;
+    ManagedAccount public rewardAccount; // account used to manage the rewards which are to be distributed to the Token holders seperately, so they don't appear in `this.balance` 
+
+    // deposit in Ether to be paid for each proposal
+    uint public proposalDeposit;
+
+    DAO_Creator public daoCreator;
+
     modifier onlyShareholders {}
 
     /// @dev Constructor setting the default service provider and the address for the contract able to create another DAO
@@ -95,26 +116,6 @@ contract DAOInterface {
     event ProposalTallied(uint proposalID, bool result, uint quorum, bool active);
     event NewServiceProvider(address _newServiceProvider);
     event AllowedRecipientAdded(address _recipient);
-
-    // Contract Variables and events
-    Proposal[] public proposals;
-    uint public numProposals;
-
-    uint public rewards;
-
-    address public serviceProvider;
-    address[] public allowedRecipients;
-
-    mapping (address => uint) public rewardRights;  //only used for splits, give DAOs without a balance the privilige to access there share of the rewards
-    uint public accumulatedRewardRights;
-
-    mapping (address => uint) public payedOut;
-    ManagedAccount public rewardAccount; // account used to manage the rewards which are to be distributed to the Token holders seperately, so they don't appear in `this.balance` 
-
-    // deposit in Ether to be paid for each proposal
-    uint public proposalDeposit;
-
-    DAO_Creator public daoCreator;
 
     struct Proposal {
         address recipient;
