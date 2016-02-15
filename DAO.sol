@@ -112,10 +112,10 @@ contract DAOInterface {
 
 
     event ProposalAdded(uint proposalID, address recipient, uint amount, string description);
-    event Voted(uint proposalID, bool position, address voter);
+    event Voted(uint proposalID, bool position, address indexed voter);
     event ProposalTallied(uint proposalID, bool result, uint quorum, bool active);
     event NewServiceProvider(address _newServiceProvider);
-    event AllowedRecipientAdded(address _recipient);
+    event AllowedRecipientAdded(address indexed _recipient);
 
     struct Proposal {
         address recipient;
@@ -200,6 +200,7 @@ contract DAO is DAOInterface, Token, Crowdfunding {
     function vote(uint _proposalNumber, bool _supportsProposal) onlyShareholders returns (uint _voteID) {
         Proposal p = proposals[_proposalNumber];
         if (p.voted[msg.sender] == true) throw;
+        if (now >= p.votingDeadline) throw;
 
         _voteID = p.votes.length++;
         p.votes[_voteID] = Vote({inSupport: _supportsProposal, voter: msg.sender});
@@ -219,19 +220,18 @@ contract DAO is DAOInterface, Token, Crowdfunding {
             throw;
 
         // tally the votes
-        uint quorum = 0;
         uint yea = 0;
         uint nay = 0;
 
         for (uint i = 0; i < p.votes.length; ++i) {
             Vote v = p.votes[i];
             uint voteWeight = balanceOf(v.voter);
-            quorum += voteWeight;
             if (v.inSupport)
                 yea += voteWeight;
             else
                 nay += voteWeight;
         }
+        uint quorum = yea + nay;
 
         // execute result
         if (quorum >= minQuorum(p.amount) && yea > nay) {
@@ -309,11 +309,15 @@ contract DAO is DAOInterface, Token, Crowdfunding {
 
 
     function transferFrom(address _from, address _to, uint256 _value) returns (bool success) {
-        uint transferPayedOut = payedOut[_from] * _value / balanceOf(msg.sender);
+        uint transferPayedOut = payedOut[_from] * _value / balanceOf(_from);
+        if (transferPayedOut > payedOut[_from]) throw;
         if (super.transferFrom(_from, _to, _value)){
             payedOut[_from] -= transferPayedOut;
             payedOut[_to] += transferPayedOut;
+            return true;
         }
+        else
+            return false;
     }
 
     function changeProposalDeposit(uint _proposalDeposit) external {

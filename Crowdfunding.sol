@@ -28,7 +28,7 @@ For more information, please refer to <http://unlicense.org>
 
 */
 
-/*Basic crowdsale contract. Allows to sale Tokens for the price of one Ether */
+/* Basic crowdsale contract. Allows to sell Tokens for the price of one Ether */
 
 import "./Token.sol";
 
@@ -47,15 +47,15 @@ contract CrowdfundingInterface {
     function ();
 
     /// @notice Buy token with `_beneficiary` as the beneficiary. One ether creates one token (same base units)
-    /// @param _beneficiary The beneficary of for the token bought with ether
+    /// @param _beneficiary The beneficary of the token bought with ether
     function buyTokenProxy(address _beneficiary) returns (bool success);
 
     /// @notice Refund `msg.sender` in the case of a not successful crowdfunding
     function refund();
 
     event Funded(uint value);
-    event SoldToken(address to, uint value);
-    event Refund(address to, uint value);
+    event SoldToken(address indexed to, uint value);
+    event Refund(address indexed to, uint value);
 }
 
 contract Crowdfunding is CrowdfundingInterface, Token {
