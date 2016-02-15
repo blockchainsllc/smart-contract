@@ -38,7 +38,7 @@ contract DAOInterface {
 
     // Contract Variables and events
     Proposal[] public proposals;
-    uint public numProposals;
+    uint public numProposals; // TODO needed?
 
     uint public rewards;
 
@@ -58,6 +58,7 @@ contract DAOInterface {
     // deposit in Ether to be paid for each proposal
     uint public proposalDeposit;
 
+    // contract which is able to create a new DAO (with the same code as this one), used for splits
     DAO_Creator public daoCreator;
 
     struct Proposal {
@@ -73,14 +74,14 @@ contract DAOInterface {
         bool openToVote;
         // True if the porposal has been voted for, False if voted against
         bool proposalPassed;
-        uint numberOfVotes;
+        uint numberOfVotes; // TODO is this needed?
         // A hash to check validity of a proposal. Equal to sha3(_recipient, _amount, _transactionBytecode)
         bytes32 proposalHash;
         // The deposit in ether the creator puts in the proposal. Is taken as the msg.value of a newProposal call
         uint proposalDeposit;
         // True if this proposal is to assign a new service provider
         bool newServiceProvider;
-        // Used only in the case of a newServiceProvider proposal. Is the balance of the old DAO minus the deposit.
+        // Used only in the case of a newServiceProvider proposal. Is the balance of the current DAO minus the deposit.
         uint splitBalance;
         // Used only in the case of a newServiceProvider porposal. Represents the new DAO contract.
         DAO newDAO;
@@ -131,14 +132,14 @@ contract DAOInterface {
 
     /// @notice Checks whether proposal `_proposalID` with transaction data `_transactionBytecode` has been voted for or rejected, and executes the transaction in the case it has been voted for.
     /// @param _proposalID The proposal ID
-    /// @param _transactionBytecode The data of the proposed transaction
+    /// @param _transactionBytecode The data of the proposed transaction // TODO is this needed
     /// @return Whether the proposed transaction has been executed or not
     function executeProposal(uint _proposalID, bytes _transactionBytecode) returns (bool _success);
 
-    /// @notice ATTENTION! I confirm to move my remaining funds to a new DAO with `_newServiceProvider` as the new service provider, as has been proposed in proposal `_proposalID`. This will burn the portion of my tokens according to the funds the DAO has already spent. This can not be undone and will split the DAO into two DAO's, with two underlying tokens.
+    /// @notice ATTENTION! I confirm to move my remaining funds to a new DAO with `_newServiceProvider` as the new service provider, as has been proposed in proposal `_proposalID`. This will burn my tokens. This can not be undone and will split the DAO into two DAO's, with two underlying tokens.
     /// @param _proposalID The proposal ID
     /// @param _newServiceProvider The new service provider of the new DAO
-    /// @dev This function, when called for the first time for this proposal, will create a new DAO and send the portion of the remaining funds which can be attributed to the sender to the new DAO. It will also burn the tokens of the sender according the unspent funds of the DAO.
+    /// @dev This function, when called for the first time for this proposal, will create a new DAO and send the portion of the remaining funds which can be attributed to the sender to the new DAO. It will also burn the tokens of the sender.
     function confirmNewServiceProvider(uint _proposalID, address _newServiceProvider);
 
     /// @notice add new possible recipient `_recipient` for transactions from the DAO (through proposals)
@@ -151,7 +152,7 @@ contract DAOInterface {
     function changeProposalDeposit(uint _proposalDeposit) external;
 
     /// @notice get my share of the reward which has been send to `rewardAccount`
-    function getMyReward();
+    function getMyReward() external;
 
 
     event ProposalAdded(uint proposalID, address recipient, uint amount, string description);
@@ -179,7 +180,7 @@ contract DAO is DAOInterface, Token, Crowdfunding {
     function DAO(address _defaultServiceProvider, DAO_Creator _daoCreator, uint _minValue, uint _closingTime) Crowdfunding(_minValue, _closingTime) {
         serviceProvider = _defaultServiceProvider;
         daoCreator = _daoCreator;
-        proposalDeposit = 100 ether;
+        proposalDeposit = 20 ether;
         rewardAccount = new ManagedAccount(address(this));
         if (address(rewardAccount) == 0) throw;
     }
@@ -212,14 +213,14 @@ contract DAO is DAOInterface, Token, Crowdfunding {
     }
 
 
-    function checkProposalCode(uint _proposalNumber, address _recipient, uint _amount, bytes _transactionBytecode) constant returns (bool _codeChecksOut) {
-        Proposal p = proposals[_proposalNumber];
+    function checkProposalCode(uint _proposalID, address _recipient, uint _amount, bytes _transactionBytecode) constant returns (bool _codeChecksOut) {
+        Proposal p = proposals[_proposalID];
         return p.proposalHash == sha3(_recipient, _amount, _transactionBytecode);
     }
 
 
-    function vote(uint _proposalNumber, bool _supportsProposal) onlyShareholders returns (uint _voteID) {
-        Proposal p = proposals[_proposalNumber];
+    function vote(uint _proposalID, bool _supportsProposal) onlyShareholders returns (uint _voteID) {
+        Proposal p = proposals[_proposalID];
         if (p.voted[msg.sender] == true) throw;
         if (now >= p.votingDeadline) throw;
 
@@ -227,12 +228,12 @@ contract DAO is DAOInterface, Token, Crowdfunding {
         p.votes[_voteID] = Vote({inSupport: _supportsProposal, voter: msg.sender});
         p.voted[msg.sender] = true;
         p.numberOfVotes = _voteID + 1;
-        Voted(_proposalNumber, _supportsProposal, msg.sender);
+        Voted(_proposalID, _supportsProposal, msg.sender);
     }
 
 
-    function executeProposal(uint _proposalNumber, bytes _transactionBytecode) returns (bool _success) {
-        Proposal p = proposals[_proposalNumber];
+    function executeProposal(uint _proposalID, bytes _transactionBytecode) returns (bool _success) {
+        Proposal p = proposals[_proposalID];
         // Check if the proposal can be executed
         if (now < p.votingDeadline  // has the voting deadline arrived?
             || !p.openToVote        // has it been already executed?
@@ -268,12 +269,12 @@ contract DAO is DAOInterface, Token, Crowdfunding {
         }
 
         // fire event
-        ProposalTallied(_proposalNumber, _success, quorum, p.openToVote);
+        ProposalTallied(_proposalID, _success, quorum, p.openToVote);
     }
 
 
-    function confirmNewServiceProvider(uint _proposalNumber, address _newServiceProvider) onlyShareholders {
-        Proposal p = proposals[_proposalNumber];
+    function confirmNewServiceProvider(uint _proposalID, address _newServiceProvider) onlyShareholders {
+        Proposal p = proposals[_proposalID];
         // sanity check
         if (now < p.votingDeadline  // has the voting deadline arrived?
             || now > p.votingDeadline + 41 days
@@ -294,30 +295,20 @@ contract DAO is DAOInterface, Token, Crowdfunding {
             p.proposalDeposit = 0;
         }
 
-        Transfer(msg.sender, 0, balances[msg.sender]); // this transfer will happen in 2 steps below
-
-        // burn tokens
-        uint tokenToBeBurned = (balances[msg.sender] * p.splitBalance) / (totalSupply + rewards);
-        if (balances[msg.sender] < tokenToBeBurned) { // This happens when the DAO has had income not counted in `rewards`.
-            totalSupply -= balances[msg.sender];
-            balances[msg.sender] = 0;
-        } else {
-            totalSupply -= tokenToBeBurned;
-            balances[msg.sender] -= tokenToBeBurned;
-        }
-
         // move funds and assign new Tokens
-        uint fundsToBeMoved = (balances[msg.sender] * p.splitBalance) / totalSupply; // totalSupply represents the sum of unsplit tokens
+        uint fundsToBeMoved = (balances[msg.sender] * p.splitBalance) / (totalSupply + totalRewardRights); // totalSupply represents the sum of unsplit tokens
         if (p.newDAO.buyTokenProxy.value(fundsToBeMoved).gas(52225)(msg.sender) == false) throw; // TODO test gas costs
 
-        rewardRights[address(p.newDAO)] += balances[msg.sender];
-        totalRewardRights += balances[msg.sender];
-        totalSupply -= balances[msg.sender];
+        uint rewardRight = balances[msg.sender] - (balances[msg.sender] * p.splitBalance) / (totalSupply + rewards); // totalSupply equals inital amount of money
+        rewardRights[address(p.newDAO)] += rewardRight;
+        totalRewardRights += rewardRight;
+        totalSupply -= rewardRight;
+        Transfer(msg.sender, 0, balances[msg.sender]);
         balances[msg.sender] = 0;
     }
 
 
-    function getMyReward() {
+    function getMyReward() external {
         uint total = totalSupply + totalRewardRights;
         uint myReward = (balanceOf(msg.sender) + rewardRights[msg.sender]) * rewardAccount.accumulatedInput() / total - payedOut[msg.sender]; // DANGER - 1024 stackdepth
         if (!rewardAccount.payOut(msg.sender, myReward)) throw;
@@ -369,23 +360,23 @@ contract DAO is DAOInterface, Token, Crowdfunding {
         if (_newServiceProvider)
             return 61 days;
         else
-            return 1 weeks + (_value * 31 days) / (totalSupply + rewards);
+            return 1 weeks + (_value * 31 days) / (totalSupply + rewards);    // minimum of one week and maximum of one month and one week (depending on the value to be transferred)
     }
 
 
     function minQuorum(uint _value) internal returns (uint _minQuorum) {
-        return totalSupply / 5 + _value / 3;
+        return totalSupply / 5 + _value / 3;     // minimum of 20% and maximum of 53.33% (depending on the value to be transferred)
     }
 
 
     function createNewDAO(address _newServiceProvider) internal returns (DAO _newDAO) {
         NewServiceProvider(_newServiceProvider);
-        return daoCreator.createDAO(_newServiceProvider, daoCreator, 0, now + 42 days);
+        return daoCreator.createDAO(_newServiceProvider, 0, now + 42 days);
     }
 }
 
 contract DAO_Creator {
-    function createDAO(address _defaultServiceProvider, DAO_Creator _daoCreator, uint _minValue, uint _closingTime) returns (DAO _newDAO) {
-        return new DAO(_defaultServiceProvider, _daoCreator, _minValue, _closingTime);
+    function createDAO(address _defaultServiceProvider, uint _minValue, uint _closingTime) returns (DAO _newDAO) {
+		return new DAO(_defaultServiceProvider, DAO_Creator(this), _minValue, _closingTime);
     }
 }
