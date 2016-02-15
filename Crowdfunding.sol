@@ -33,6 +33,11 @@ For more information, please refer to <http://unlicense.org>
 import "./Token.sol";
 
 contract CrowdfundingInterface {
+
+    uint public closingTime;                   // end of crowdfunding
+    uint public minValue;                      // minimal goal of crowdfunding
+    bool public funded;                        // true if project is funded, false otherwise
+
     /// @dev Constructor setting the minimal target and the end of the crowdsale
     /// @param _minValue Minimal value for a successful crowdfunding
     /// @param _closingTime Date (in unix time) of the end of the crowdsale
@@ -54,11 +59,6 @@ contract CrowdfundingInterface {
 }
 
 contract Crowdfunding is CrowdfundingInterface, Token {
-
-    uint public closingTime;                   // end of crowdfunding
-    uint public minValue;                      // minimal goal of crowdfunding
-    bool public funded;                        // true if project is funded, false otherwise
-
 
     function Crowdfunding(uint _minValue, uint _closingTime) {
         closingTime = _closingTime;
