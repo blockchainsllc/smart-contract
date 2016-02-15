@@ -199,6 +199,7 @@ contract DAO is DAOInterface, Token, Crowdfunding {
     function vote(uint _proposalNumber, bool _supportsProposal) onlyShareholders returns (uint _voteID) {
         Proposal p = proposals[_proposalNumber];
         if (p.voted[msg.sender] == true) throw;
+        if (now >= p.votingDeadline) throw;
 
         _voteID = p.votes.length++;
         p.votes[_voteID] = Vote({inSupport: _supportsProposal, voter: msg.sender});
