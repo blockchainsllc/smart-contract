@@ -296,10 +296,16 @@ contract DAO is DAOInterface, Token, Crowdfunding {
         }
 
         // move funds and assign new Tokens
+
         uint fundsToBeMoved = (balances[msg.sender] * p.splitBalance) / (totalSupply + totalRewardRights); // totalSupply represents the sum of unsplit tokens
         if (p.newDAO.buyTokenProxy.value(fundsToBeMoved).gas(52225)(msg.sender) == false) throw; // TODO test gas costs
 
-        uint rewardRight = balances[msg.sender] - (balances[msg.sender] * p.splitBalance) / (totalSupply + rewards); // totalSupply equals inital amount of money
+        uint rewardRight;
+		if (p.splitBalance >= totalSupply + totalRewardRights)
+			rewardRight = 0;
+		else
+			rewardRight = balances[msg.sender] - (balances[msg.sender] * p.splitBalance) / (totalSupply + rewards); // totalSupply equals inital amount of money
+
         rewardRights[address(p.newDAO)] += rewardRight;
         totalRewardRights += rewardRight;
         totalSupply -= rewardRight;
