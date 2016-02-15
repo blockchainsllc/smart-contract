@@ -39,6 +39,7 @@ contract TokenInterface {
 
     mapping (address => uint256) balances;
     mapping (address => mapping (address => uint256)) allowed;
+
 	/// @return total amount of tokens
     uint256 public totalSupply;
 
@@ -93,14 +94,14 @@ contract Token is TokenInterface {
             return false;
     }
 
-    function balanceOf(address _owner) constant returns (uint256 balance) {
-        return balances[_owner];
-    }
-
     function approve(address _spender, uint256 _value) returns (bool success) {
         allowed[msg.sender][_spender] = _value;
         Approval(msg.sender, _spender, _value);
         return true;
+    }
+
+    function balanceOf(address _owner) constant returns (uint256 balance) {
+        return balances[_owner];
     }
 
     function allowance(address _owner, address _spender) constant returns (uint256 remaining) {
