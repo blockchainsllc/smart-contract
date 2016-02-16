@@ -71,6 +71,9 @@ contract Crowdfunding is CrowdfundingInterface, Token {
         return buyTokenProxy(msg.sender);
     }
 
+    function isAcceptingFunds() returns (bool open) {
+       return now < closingTime;
+    }
 
     function buyTokenProxy(address _beneficiary) returns (bool success) {
         if (now < closingTime && msg.value > 0) {
