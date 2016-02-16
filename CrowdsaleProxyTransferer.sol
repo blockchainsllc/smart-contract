@@ -55,7 +55,7 @@ contract CrowdsaleProxyTransferer {
     
     function sendValues(uint _amount) {
         CrowdfundingInterface funding = CrowdfundingInterface(dao);
-        if (funding.isAcceptingFunds()) 
+        if (now < funding.closingTime()) 
            funding.buyTokenProxy.value(_amount)(owner);
         else if (_amount > 0)
            owner.send(_amount);
