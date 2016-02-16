@@ -47,9 +47,6 @@ contract CrowdfundingInterface {
     /// @param _closingTime Date (in unix time) of the end of the crowdsale
     //  function Crowdfunding(uint _minValue, uint _closingTime); // its commented out only because the constructor can not be overloaded
 
-    /// @notice Buy token with `msg.sender` as the beneficiary.
-    function () returns (bool success);
-
     /// @notice Buy token with `_beneficiary` as the beneficiary.
     /// @param _beneficiary The beneficary of the tokens bought with ether
     function buyTokenProxy(address _beneficiary) returns (bool success);
@@ -67,11 +64,6 @@ contract Crowdfunding is CrowdfundingInterface, Token {
     function Crowdfunding(uint _minValue, uint _closingTime) {
         closingTime = _closingTime;
         minValue = _minValue;
-    }
-
-
-    function () returns (bool success) {
-        return buyTokenProxy(msg.sender);
     }
 
 

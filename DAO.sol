@@ -120,6 +120,9 @@ contract DAOInterface {
     /// @param _closingTime Date (in unix time) of the end of the crowdsale
     //  function DAO(address _defaultServiceProvider, DAO_Creator _daoCreator, uint _minValue, uint _closingTime)  // its commented out only because the constructor can not be overloaded
 
+    /// @notice Buy token with `msg.sender` as the beneficiary as long as crowdfunding is not closed, otherwise call receiveDAOReward().
+    function () returns (bool success);
+
     /// @dev function used to receive rewards as the DAO
     /// @return Whether the call to this function was successful or not
     function receiveDAOReward() returns(bool);
@@ -197,6 +200,15 @@ contract DAO is DAOInterface, Token, Crowdfunding {
         if (address(rewardAccount) == 0) throw;
     }
 
+
+    function () returns (bool success) {
+        // needed for a splitted DAO to receive its rewards of the parent DAO. The 40 days are a safety measure.
+        // No new DAO can be created withing this time, and in the case people accidently send Ether to the crowdsale, it will bounce back in the buyTokenProxy function
+        if (now > closingTime + 40 days)
+            return receiveDAOReward();
+        else
+            return buyTokenProxy(msg.sender);
+    }
 
     function receiveDAOReward() returns(bool) {
         rewards += msg.value;
