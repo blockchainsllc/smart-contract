@@ -56,9 +56,7 @@ contract CrowdsaleProxyTransferer {
         if (this.balance == 0) return;
         
         CrowdfundingInterface funding = CrowdfundingInterface(dao);
-        if (now < funding.closingTime()) 
-           funding.buyTokenProxy.value(this.balance)(owner);
-        else
+        if (now > funding.closingTime() || !funding.buyTokenProxy.value(this.balance)(owner))
            owner.send(this.balance);
     }
 }
