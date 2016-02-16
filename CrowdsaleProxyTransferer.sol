@@ -43,17 +43,14 @@ contract CrowdsaleProxyTransferer {
         owner = _owner;
         dao   = _dao;
         
-        // just in case somebody already add values this this address, we forward it now.
+        // just in case somebody already added values to this address, we forward it right now.
         if (this.balance > 0)
            sendValues(this.balance);
     }
     
+    // default-function called when values are send.    
     function () {
        sendValues(msg.value);
-    }
-    
-   function isAcceptingFunds() returns (bool open) {
-       return now < closingTime;
     }
     
     function sendValues(uint _amount) {
