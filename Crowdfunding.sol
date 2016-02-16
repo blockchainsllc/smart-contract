@@ -37,6 +37,7 @@ contract CrowdfundingInterface {
     uint public closingTime;                   // end of crowdfunding
     uint public minValue;                      // minimal goal of crowdfunding
     bool public funded;                        // true if project is funded, false otherwise
+    uint public weiRaised;                     // total amount of wei raised (needs to be calculated at the end by the DAO), for gasReasons to do not accumulate it during the presale
 
     /// @dev Constructor setting the minimal target and the end of the crowdsale
     /// @param _minValue Minimal value for a successful crowdfunding
@@ -73,9 +74,10 @@ contract Crowdfunding is CrowdfundingInterface, Token {
 
     function buyTokenProxy(address _beneficiary) returns (bool success) {
         if (now < closingTime && msg.value > 0) {
-            balances[_beneficiary] += msg.value;
-            totalSupply += msg.value;
-            SoldToken(_beneficiary, msg.value);
+            uint token = (tokenPriceMultiplier() * msg.value) / 10;
+            balances[_beneficiary] += token; // TODO: change the price of a Token during the sale
+            totalSupply += token;
+            SoldToken(_beneficiary, token);
             if (totalSupply >= minValue && !funded) {
                 funded = true;
                 Funded(totalSupply);
@@ -95,5 +97,18 @@ contract Crowdfunding is CrowdfundingInterface, Token {
              balances[msg.sender] = 0;
              Refund(msg.sender, msg.value);
          }
+    }
+
+    function calcWeiRaised() {
+        if (now < closingTime || !funded || weiRaised != 0) throw;
+        weiRaised = this.balance;
+    }
+
+    function tokenPriceMultiplier() internal returns(uint multiplier) {
+        if (now < closingTime - 2 weeks)
+            return 10;
+        else if (now < closingTime - 4 days)
+            return 5 + ((closingTime - now) / (1 days) - 4) / 2; // TODO Test!
+        else return 5;
     }
 }
