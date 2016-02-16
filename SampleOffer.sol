@@ -86,7 +86,7 @@ contract SampleOffer
         if (msg.value < deploymentFee)
             throw;
         if (promiseValid) {
-            if (client.getReward.value(msg.value)()) return true;
+            if (client.receiveDAOReward.value(msg.value)()) return true;
             else throw;
         }
         else {
@@ -98,7 +98,7 @@ contract SampleOffer
     // pay fee
     function () returns(bool) {
         if (promiseValid) {
-            if (client.getReward.value(msg.value)()) return true;
+            if (client.receiveDAOReward.value(msg.value)()) return true;
             else throw;
         }
         else {
