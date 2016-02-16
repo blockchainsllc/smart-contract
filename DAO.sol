@@ -49,6 +49,7 @@ contract DAOInterface {
     //only used for splits, give DAOs without a balance the privilige to access their share of the rewards
     mapping (address => uint) public rewardRights;
     uint public totalRewardRights;
+    uint totalWeiSpendInSplits;
 
 
     mapping (address => uint) public payedOut;
@@ -81,16 +82,27 @@ contract DAOInterface {
         uint proposalDeposit;
         // True if this proposal is to assign a new service provider
         bool newServiceProvider;
-        // Used only in the case of a newServiceProvider proposal. Is the balance of the current DAO minus the deposit.
-        uint splitBalance;
-        // Used only in the case of a newServiceProvider porposal. Represents the new DAO contract.
-        DAO newDAO;
+        // Split data
+        SplitData[] splitData;
         // Array holding all votes that have taken place on the proposal
         Vote[] votes;
         // Simple mapping to check if a shareholder has already cast a vote
         mapping (address => bool) voted;
         // Address of the shareholder who created the proposal
         address creator;
+    }
+
+    struct SplitData {
+        // Used only in the case of a newServiceProvider proposal. Is the balance of the current DAO minus the deposit.
+        uint splitBalance;
+        // Used only in the case of a newServiceProvider proposal. Is the accumulated total wei received in the DAO.
+        uint totalWeiReceived;
+        // Used only in the case of a newServiceProvider proposal. Is the amount of wei the DAO has invested.
+        uint investedWei;
+        // Used only in the case of a newServiceProvider porposal. Represents the total amount of token in existenct at the time of split.
+        uint totalSupply;
+        // Used only in the case of a newServiceProvider porposal. Represents the new DAO contract.
+        DAO newDAO;
     }
 
     struct Vote {
@@ -193,7 +205,7 @@ contract DAO is DAOInterface, Token, Crowdfunding {
         }
         else if (!isRecipientAllowed(_recipient)) throw;
 
-        if (!funded || msg.value < proposalDeposit) throw;
+        if (!funded || now < closingTime || msg.value < proposalDeposit) throw;
 
         _proposalID = proposals.length++;
         Proposal p = proposals[_proposalID];
@@ -206,6 +218,8 @@ contract DAO is DAOInterface, Token, Crowdfunding {
         //p.proposalPassed = false; // that's default
         //p.numberOfVotes = 0;
         p.newServiceProvider = _newServiceProvider;
+        if (_newServiceProvider)
+            p.splitData.length++;
         p.creator = msg.sender;
         p.proposalDeposit = msg.value;
         ProposalAdded(_proposalID, _recipient, _amount, _description);
@@ -283,33 +297,39 @@ contract DAO is DAOInterface, Token, Crowdfunding {
             || p.recipient != _newServiceProvider) //(not needed)
             throw;
 
-        // if not already happened, create new DAO and store the current balance
-        if (address(p.newDAO) == 0) {
-            p.newDAO = createNewDAO(_newServiceProvider);
-            if (address(p.newDAO) == 0) throw; // Call depth limit reached, etc.
+        // if not already happened, create new DAO and store the current split data
+        if (address(p.splitData[0].newDAO) == 0) {
+            p.splitData[0].newDAO = createNewDAO(_newServiceProvider);
+            if (address(p.splitData[0].newDAO) == 0) throw; // Call depth limit reached, etc.
             if (this.balance < p.proposalDeposit) throw;
-            p.splitBalance = this.balance - p.proposalDeposit;
+            p.splitData[0].splitBalance = this.balance - p.proposalDeposit;
+            p.splitData[0].totalWeiReceived = weiRaised + rewards;
+            p.splitData[0].totalSupply = totalSupply;
+            uint spentAndStored = rewardAccount.accumulatedInput() + p.splitData[0].splitBalance + totalWeiSpendInSplits;
+            if (spentAndStored >= p.splitData[0].totalWeiReceived)
+                p.splitData[0].investedWei = 0;
+            else
+                p.splitData[0].investedWei = p.splitData[0].totalWeiReceived - spentAndStored;
         }
 
+        // refund proposal deposit
         if (msg.sender == p.creator && p.proposalDeposit > 0 && p.creator.send(p.proposalDeposit)) {
             p.proposalDeposit = 0;
         }
 
         // move funds and assign new Tokens
+        uint fundsToBeMoved = (balances[msg.sender] * p.splitData[0].splitBalance) / p.splitData[0].totalSupply; // totalSupply represents the sum of unsplit tokens
+        if (p.splitData[0].newDAO.buyTokenProxy.value(fundsToBeMoved).gas(52225)(msg.sender) == false) throw; // TODO test gas costs
+        totalWeiSpendInSplits += fundsToBeMoved;
 
-        uint fundsToBeMoved = (balances[msg.sender] * p.splitBalance) / (totalSupply + totalRewardRights); // totalSupply represents the sum of unsplit tokens
-        if (p.newDAO.buyTokenProxy.value(fundsToBeMoved).gas(52225)(msg.sender) == false) throw; // TODO test gas costs
-
-        uint rewardRight;
-		if (p.splitBalance >= totalSupply + totalRewardRights)
-			rewardRight = 0;
-		else
-			rewardRight = balances[msg.sender] - (balances[msg.sender] * p.splitBalance) / (totalSupply + rewards); // totalSupply equals inital amount of money
-
-        rewardRights[address(p.newDAO)] += rewardRight;
+        // assign reward rights to new DAO
+        uint rewardRight = (balances[msg.sender] * p.splitData[0].investedWei) / p.splitData[0].totalWeiReceived;
+        rewardRights[address(p.splitData[0].newDAO)] += rewardRight;
         totalRewardRights += rewardRight;
-        totalSupply -= rewardRight;
+
+        // burn tokens
         Transfer(msg.sender, 0, balances[msg.sender]);
+        totalSupply -= balances[msg.sender];
         balances[msg.sender] = 0;
     }
 
@@ -364,9 +384,9 @@ contract DAO is DAOInterface, Token, Crowdfunding {
 
     function debatingPeriod(bool _newServiceProvider, uint _value) internal returns (uint _debatingPeriod) {
         if (_newServiceProvider)
-            return 61 days;
+            return 10 days;
         else
-            return 1 weeks + (_value * 31 days) / (totalSupply + rewards);    // minimum of one week and maximum of one month and one week (depending on the value to be transferred)
+            return 2 weeks + (_value * 31 days) / (totalSupply + rewards);    // minimum of two weeks and maximum of one month and two weeks (depending on the value to be transferred)
     }
 
 
@@ -383,6 +403,6 @@ contract DAO is DAOInterface, Token, Crowdfunding {
 
 contract DAO_Creator {
     function createDAO(address _defaultServiceProvider, uint _minValue, uint _closingTime) returns (DAO _newDAO) {
-		return new DAO(_defaultServiceProvider, DAO_Creator(this), _minValue, _closingTime);
+        return new DAO(_defaultServiceProvider, DAO_Creator(this), _minValue, _closingTime);
     }
 }
