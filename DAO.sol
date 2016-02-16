@@ -343,21 +343,29 @@ contract DAO is DAOInterface, Token, Crowdfunding {
 
 
     function transfer(address _to, uint256 _value) returns (bool success) {
-        return transferFrom(msg.sender, _to, _value);
+        if (super.transfer(_to, _value) && transferPayedOut(msg.sender, _to, _value)){
+            return true;
+        }
+        else throw;
     }
 
 
     function transferFrom(address _from, address _to, uint256 _value) returns (bool success) {
-        uint transferPayedOut = payedOut[_from] * _value / balanceOf(_from);
-        if (transferPayedOut > payedOut[_from]) throw;
-        if (super.transferFrom(_from, _to, _value)){
-            payedOut[_from] -= transferPayedOut;
-            payedOut[_to] += transferPayedOut;
+        if (super.transferFrom(_from, _to, _value) && transferPayedOut(_from, _to, _value)){
             return true;
         }
-        else
-            return false;
+        else throw;
     }
+
+
+    function transferPayedOut(address _from, address _to, uint256 _value) internal returns (bool success){
+        uint transferPayedOut = payedOut[_from] * _value / balanceOf(_from); // TODO Dangerous because of remainder, or negligable due to gas costs of the attack?
+        if (transferPayedOut > payedOut[_from]) throw;
+        payedOut[_from] -= transferPayedOut;
+        payedOut[_to] += transferPayedOut;
+        return true;
+    }
+
 
     function changeProposalDeposit(uint _proposalDeposit) external {
         if (msg.sender != address(this) || _proposalDeposit > this.balance / 10) throw;
