@@ -44,20 +44,21 @@ contract CrowdsaleProxyTransferer {
         dao   = _dao;
         
         // just in case somebody already added values to this address, we forward it right now.
-        if (this.balance > 0)
-           sendValues(this.balance);
+        sendValues();
     }
     
     // default-function called when values are send.    
     function () {
-       sendValues(msg.value);
+       sendValues();
     }
     
-    function sendValues(uint _amount) {
+    function sendValues() {
+        if (this.balance == 0) return;
+        
         CrowdfundingInterface funding = CrowdfundingInterface(dao);
         if (now < funding.closingTime()) 
-           funding.buyTokenProxy.value(_amount)(owner);
-        else if (_amount > 0)
-           owner.send(_amount);
+           funding.buyTokenProxy.value(this.balance)(owner);
+        else
+           owner.send(this.balance);
     }
 }
