@@ -40,7 +40,7 @@ contract TokenInterface {
     mapping (address => uint256) balances;
     mapping (address => mapping (address => uint256)) allowed;
 
-	/// @return total amount of tokens
+    /// @return total amount of tokens
     uint256 public totalSupply;
 
     /// @param _owner The address from which the balance will be retrieved
@@ -78,15 +78,21 @@ contract TokenInterface {
 contract Token is TokenInterface {
 
     function transfer(address _to, uint256 _value) returns (bool success) {
-        return transferFrom(msg.sender, _to, _value);
+        if (balances[msg.sender] >= _value && _value > 0) {
+            balances[msg.sender] -= _value;
+            balances[_to] += _value;
+            Transfer(msg.sender, _to, _value);
+            return true;
+        }
+        else
+           return false;
     }
 
     function transferFrom(address _from, address _to, uint256 _value) returns (bool success) {
-        if (balances[_from] >= _value && (_from == msg.sender || allowed[_from][msg.sender] >= _value) && _value > 0) {
+        if (balances[_from] >= _value && allowed[_from][msg.sender] >= _value && _value > 0) {
             balances[_to] += _value;
             balances[_from] -= _value;
-            if (_from != msg.sender)
-                allowed[_from][msg.sender] -= _value;
+            allowed[_from][msg.sender] -= _value;
             Transfer(_from, _to, _value);
             return true;
         }
@@ -105,6 +111,6 @@ contract Token is TokenInterface {
     }
 
     function allowance(address _owner, address _spender) constant returns (uint256 remaining) {
-      return allowed[_owner][_spender];
+        return allowed[_owner][_spender];
     }
 }
