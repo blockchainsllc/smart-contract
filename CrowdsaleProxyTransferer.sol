@@ -37,8 +37,7 @@ import "./Crowdfunding.sol";
 contract CrowdsaleProxyTransferer {
     address public owner;
     address public dao;
-    uint public closingTime;  
-    
+
     //constructor 
     function CrowdsaleProxyTransferer(address _owner, address _dao) {
         owner = _owner;
