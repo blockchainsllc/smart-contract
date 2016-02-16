@@ -229,7 +229,7 @@ contract DAO is DAOInterface, Token, Crowdfunding {
         p.creator = msg.sender;
         p.proposalDeposit = msg.value;
         ProposalAdded(_proposalID, _recipient, _amount, _description);
-        numProposals = _proposalID + 1;
+        numProposals = _proposalID + 1; //TODO test
     }
 
 
@@ -241,8 +241,7 @@ contract DAO is DAOInterface, Token, Crowdfunding {
 
     function vote(uint _proposalID, bool _supportsProposal) onlyShareholders returns (uint _voteID) {
         Proposal p = proposals[_proposalID];
-        if (p.voted[msg.sender] == true) throw;
-        if (now >= p.votingDeadline) throw;
+        if (p.voted[msg.sender] || now >= p.votingDeadline) throw;
 
         _voteID = p.votes.length++;
         p.votes[_voteID] = Vote({inSupport: _supportsProposal, voter: msg.sender});
@@ -278,11 +277,12 @@ contract DAO is DAOInterface, Token, Crowdfunding {
         // execute result
         if (quorum >= minQuorum(p.amount) && yea > nay) {
             if (!p.creator.send(p.proposalDeposit)) throw;
-            if (!p.recipient.call.value(p.amount)(_transactionBytecode)) throw;  // Without this throw, the creator of the proposal can repeat this, and get so much fund.
+            if (!p.recipient.call.value(p.amount)(_transactionBytecode)) throw;  // Without this throw, the creator of the proposal can repeat this, and get so much fund. //TODO need of specifiying gas?
             p.openToVote = false;
             p.proposalPassed = true;
             _success = true;
-        } else if (quorum >= minQuorum(p.amount) && nay >= yea) {
+        }
+        else if (quorum >= minQuorum(p.amount) && nay >= yea) {
             p.openToVote = false;
             p.proposalPassed = false;
             if (!p.creator.send(p.proposalDeposit)) throw;
@@ -295,12 +295,12 @@ contract DAO is DAOInterface, Token, Crowdfunding {
 
     function confirmNewServiceProvider(uint _proposalID, address _newServiceProvider) onlyShareholders {
         Proposal p = proposals[_proposalID];
+
         // sanity check
         if (now < p.votingDeadline  // has the voting deadline arrived?
             || now > p.votingDeadline + 41 days
             || p.proposalHash != sha3(_newServiceProvider, 0, 0) // Does the transaction code match the proposal?
-            || !p.newServiceProvider // is it a new service provider proposal
-            || p.recipient != _newServiceProvider) //(not needed)
+            || !p.newServiceProvider) // is it a new service provider proposal
             throw;
 
         // if not already happened, create new DAO and store the current split data
@@ -325,7 +325,7 @@ contract DAO is DAOInterface, Token, Crowdfunding {
 
         // move funds and assign new Tokens
         uint fundsToBeMoved = (balances[msg.sender] * p.splitData[0].splitBalance) / p.splitData[0].totalSupply; // totalSupply represents the sum of unsplit tokens
-        if (p.splitData[0].newDAO.buyTokenProxy.value(fundsToBeMoved).gas(52225)(msg.sender) == false) throw; // TODO test gas costs
+        if (p.splitData[0].newDAO.buyTokenProxy.value(fundsToBeMoved)(msg.sender) == false) throw;
         totalWeiSpendInSplits += fundsToBeMoved;
 
         // assign reward rights to new DAO
@@ -400,7 +400,7 @@ contract DAO is DAOInterface, Token, Crowdfunding {
         if (_newServiceProvider)
             return 10 days;
         else
-            return 2 weeks + (_value * 31 days) / (totalSupply + rewards);    // minimum of two weeks and maximum of one month and two weeks (depending on the value to be transferred)
+            return 2 weeks + (_value * 31 days) / (weiRaised + rewards);    // minimum of two weeks and maximum of one month and two weeks (depending on the value to be transferred)
     }
 
 
