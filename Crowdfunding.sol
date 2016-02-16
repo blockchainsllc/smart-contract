@@ -39,16 +39,19 @@ contract CrowdfundingInterface {
     bool public funded;                        // true if project is funded, false otherwise
     uint public weiRaised;                     // total amount of wei raised (needs to be calculated at the end by the DAO), for gasReasons to do not accumulate it during the presale
 
+    mapping (address => uint256) weiGiven;     // total amount of wei given to the DAO (needed for refund)
+
+
     /// @dev Constructor setting the minimal target and the end of the crowdsale
     /// @param _minValue Minimal value for a successful crowdfunding
     /// @param _closingTime Date (in unix time) of the end of the crowdsale
     //  function Crowdfunding(uint _minValue, uint _closingTime); // its commented out only because the constructor can not be overloaded
 
-    /// @notice Buy token with `msg.sender` as the beneficiary. One ether creates one token (same base units)
+    /// @notice Buy token with `msg.sender` as the beneficiary.
     function () returns (bool success);
 
-    /// @notice Buy token with `_beneficiary` as the beneficiary. One ether creates one token (same base units)
-    /// @param _beneficiary The beneficary of the token bought with ether
+    /// @notice Buy token with `_beneficiary` as the beneficiary.
+    /// @param _beneficiary The beneficary of the tokens bought with ether
     function buyTokenProxy(address _beneficiary) returns (bool success);
 
     /// @notice Refund `msg.sender` in the case of a not successful crowdfunding
@@ -75,12 +78,14 @@ contract Crowdfunding is CrowdfundingInterface, Token {
     function buyTokenProxy(address _beneficiary) returns (bool success) {
         if (now < closingTime && msg.value > 0) {
             uint token = (tokenPriceMultiplier() * msg.value) / 10;
-            balances[_beneficiary] += token; // TODO: change the price of a Token during the sale
+            balances[_beneficiary] += token;
             totalSupply += token;
+            weiGiven[_beneficiary] += msg.value;
+            weiRaised += msg.value;
             SoldToken(_beneficiary, token);
-            if (totalSupply >= minValue && !funded) {
+            if (weiRaised >= minValue && !funded) {
                 funded = true;
-                Funded(totalSupply);
+                Funded(weiRaised);
             }
             return true;
         }
@@ -89,22 +94,20 @@ contract Crowdfunding is CrowdfundingInterface, Token {
 
 
     function refund() {
-         if (now > closingTime
-             && !funded
-             && msg.sender.send(balances[msg.sender])) // execute refund
-         {
-             totalSupply -= balances[msg.sender];
-             balances[msg.sender] = 0;
-             Refund(msg.sender, msg.value);
-         }
+        if (now > closingTime
+            && !funded
+            && msg.sender.send(weiGiven[msg.sender])) // execute refund
+        {
+            Refund(msg.sender, weiGiven[msg.sender]);
+            totalSupply -= balances[msg.sender];
+            balances[msg.sender] = 0;
+            weiRaised -= weiGiven[msg.sender];
+            weiGiven[msg.sender] = 0;
+        }
     }
 
-    function calcWeiRaised() {
-        if (now < closingTime || !funded || weiRaised != 0) throw;
-        weiRaised = this.balance;
-    }
 
-    function tokenPriceMultiplier() internal returns(uint multiplier) {
+    function tokenPriceMultiplier() constant returns(uint multiplier) {
         if (now < closingTime - 2 weeks)
             return 10;
         else if (now < closingTime - 4 days)
