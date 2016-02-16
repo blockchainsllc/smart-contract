@@ -45,18 +45,17 @@ contract DAOInterface {
     address public serviceProvider;
     address[] public allowedRecipients;
 
-
     //only used for splits, give DAOs without a balance the privilige to access their share of the rewards
     mapping (address => uint) public rewardRights;
     uint public totalRewardRights;
     uint totalWeiSpendInSplits;
 
 
-    mapping (address => uint) public payedOut;
     // account used to manage the rewards which are to be distributed to the Token holders seperately, so they don't appear in `this.balance`
     ManagedAccount public rewardAccount;
+    mapping (address => uint) public payedOut;
 
-    // deposit in Ether to be paid for each proposal
+    // deposit in weit to be paid for each proposal
     uint public proposalDeposit;
 
     // contract which is able to create a new DAO (with the same code as this one), used for splits
@@ -78,11 +77,11 @@ contract DAOInterface {
         uint numberOfVotes; // TODO is this needed?
         // A hash to check validity of a proposal. Equal to sha3(_recipient, _amount, _transactionBytecode)
         bytes32 proposalHash;
-        // The deposit in ether the creator puts in the proposal. Is taken as the msg.value of a newProposal call
+        // The deposit in wei the creator puts in the proposal. Is taken as the msg.value of a newProposal call
         uint proposalDeposit;
         // True if this proposal is to assign a new service provider
         bool newServiceProvider;
-        // Split data
+        // Data needed for splitting the DAO
         SplitData[] splitData;
         // Array holding all votes that have taken place on the proposal
         Vote[] votes;
@@ -114,10 +113,16 @@ contract DAOInterface {
 
     modifier onlyShareholders {}
 
-    /// @dev Constructor setting the default service provider and the address for the contract able to create another DAO
+    /// @dev Constructor setting the default service provider and the address for the contract able to create another DAO as well as the parameter for the crowdfunding
     /// @param _defaultServiceProvider The default service provider
     /// @param _daoCreator The contract able to (re)create this DAO
-    //  function DAO(address _defaultServiceProvider, DAO_Creator _daoCreator);  // its commented out only because the constructor can not be overloaded
+    /// @param _minValue Minimal value for a successful crowdfunding
+    /// @param _closingTime Date (in unix time) of the end of the crowdsale
+    //  function DAO(address _defaultServiceProvider, DAO_Creator _daoCreator, uint _minValue, uint _closingTime)  // its commented out only because the constructor can not be overloaded
+
+    /// @dev function used to receive rewards as the DAO
+    /// @return Whether the call to this function was successful or not
+    function receiveDAOReward() returns(bool);
 
     /// @notice `msg.sender` creates a proposal to send `_amount` Wei to `_recipient` with the transaction data `_transactionBytecode`. (If this is true: `_newServiceProvider`, then this is a proposal the set `_recipient` as the new service provider)
     /// @param _recipient The address of the recipient of the proposed transaction
@@ -139,7 +144,7 @@ contract DAOInterface {
     /// @notice Vote on proposal `_proposalID` with `_supportsProposal`
     /// @param _proposalID The proposal ID
     /// @param _supportsProposal Yes/No - support of the proposal
-    /// @return The proposal ID.
+    /// @return The vote ID.
     function vote(uint _proposalID, bool _supportsProposal) onlyShareholders returns (uint _voteID);
 
     /// @notice Checks whether proposal `_proposalID` with transaction data `_transactionBytecode` has been voted for or rejected, and executes the transaction in the case it has been voted for.
@@ -184,11 +189,6 @@ contract DAO is DAOInterface, Token, Crowdfunding {
     }
 
 
-    function getReward() returns(bool) {
-        rewards += msg.value;
-        return true;
-    }
-
     function DAO(address _defaultServiceProvider, DAO_Creator _daoCreator, uint _minValue, uint _closingTime) Crowdfunding(_minValue, _closingTime) {
         serviceProvider = _defaultServiceProvider;
         daoCreator = _daoCreator;
@@ -198,12 +198,18 @@ contract DAO is DAOInterface, Token, Crowdfunding {
     }
 
 
+    function receiveDAOReward() returns(bool) {
+        rewards += msg.value;
+        return true;
+    }
+
+
     function newProposal(address _recipient, uint _amount, string _description, bytes _transactionBytecode, bool _newServiceProvider) onlyShareholders returns (uint _proposalID) {
         // check sanity
         if (_newServiceProvider && (_amount != 0 || _transactionBytecode.length != 0 || _recipient == serviceProvider)) {
             throw;
         }
-        else if (!isRecipientAllowed(_recipient)) throw;
+        else if (!_newServiceProvider && !isRecipientAllowed(_recipient)) throw;
 
         if (!funded || now < closingTime || msg.value < proposalDeposit) throw;
 
