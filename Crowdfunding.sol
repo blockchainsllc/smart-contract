@@ -51,6 +51,10 @@ contract CrowdfundingInterface {
     /// @param _beneficiary The beneficary of the token bought with ether
     function buyTokenProxy(address _beneficiary) returns (bool success);
 
+    /// @notice returns true if the user is allowed to invest
+    function isAcceptingFunds() returns (bool open);
+    
+    
     /// @notice Refund `msg.sender` in the case of a not successful crowdfunding
     function refund();
 
