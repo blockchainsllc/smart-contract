@@ -40,16 +40,14 @@ contract DAOInterface {
     Proposal[] public proposals;
     uint public numProposals; // TODO needed?
 
-    uint public rewards;
+    uint public rewards; // needed?
 
     address public serviceProvider;
     address[] public allowedRecipients;
 
     //only used for splits, give DAOs without a balance the privilige to access their share of the rewards
-    mapping (address => uint) public rewardRights;
-    uint public totalRewardRights;
-    uint totalWeiSpendInSplits;
-
+    mapping (address => uint) public rewardToken;
+    uint public totalRewardToken;
 
     // account used to manage the rewards which are to be distributed to the DAO Token Holders seperately, so they don't appear in `this.balance`
     ManagedAccount public rewardAccount;
@@ -91,15 +89,14 @@ contract DAOInterface {
         address creator;
     }
 
+    //Used only in the case of a newServiceProvider porposal.
     struct SplitData {
-        // Used only in the case of a newServiceProvider proposal. Is the balance of the current DAO minus the deposit.
+        // is the balance of the current DAO minus the deposit at the time of split.
         uint splitBalance;
-        // Used only in the case of a newServiceProvider proposal. Is the accumulated total wei received in the DAO.
-        uint totalWeiReceived;
-        // Used only in the case of a newServiceProvider proposal. Is the amount of wei the DAO has invested.
-        uint investedWei;
-        // Used only in the case of a newServiceProvider porposal. Represents the total amount of token in existenct at the time of split.
+        //  represents the total amount of token in existence at the time of split.
         uint totalSupply;
+        // amount of rewardToken owner by the DAO at the time of split
+        uint rewardToken;
         // Used only in the case of a newServiceProvider porposal. Represents the new DAO contract.
         DAO newDAO;
     }
@@ -293,6 +290,8 @@ contract DAO is DAOInterface, Token, TokenSale {
             p.openToVote = false;
             p.proposalPassed = true;
             _success = true;
+            rewardToken[address(this)] += p.amount;
+            totalRewardToken += p.amount;
         }
         else if (quorum >= minQuorum(p.amount) && nay >= yea) {
             p.openToVote = false;
@@ -321,24 +320,19 @@ contract DAO is DAOInterface, Token, TokenSale {
             if (address(p.splitData[0].newDAO) == 0) throw; // Call depth limit reached, etc.
             if (this.balance < p.proposalDeposit) throw;
             p.splitData[0].splitBalance = this.balance - p.proposalDeposit;
-            p.splitData[0].totalWeiReceived = weiRaised + rewards;
+            p.splitData[0].rewardToken = rewardToken[address(this)];
             p.splitData[0].totalSupply = totalSupply;
-            uint spentAndStored = rewardAccount.accumulatedInput() + p.splitData[0].splitBalance + totalWeiSpendInSplits;
-            if (spentAndStored >= p.splitData[0].totalWeiReceived)
-                p.splitData[0].investedWei = 0;
-            else
-                p.splitData[0].investedWei = p.splitData[0].totalWeiReceived - spentAndStored;
         }
 
         // move funds and assign new Tokens
         uint fundsToBeMoved = (balances[msg.sender] * p.splitData[0].splitBalance) / p.splitData[0].totalSupply; // totalSupply represents the sum of unsplit tokens
         if (p.splitData[0].newDAO.buyTokenProxy.value(fundsToBeMoved)(msg.sender) == false) throw;
-        totalWeiSpendInSplits += fundsToBeMoved;
+
 
         // assign reward rights to new DAO
-        uint rewardRight = (balances[msg.sender] * p.splitData[0].investedWei) / p.splitData[0].totalWeiReceived;
-        rewardRights[address(p.splitData[0].newDAO)] += rewardRight;
-        totalRewardRights += rewardRight;
+        uint rewardTokenToBeMoved = (balances[msg.sender] * p.splitData[0].rewardToken) / p.splitData[0].totalSupply;
+        rewardToken[address(p.splitData[0].newDAO)] += rewardTokenToBeMoved;
+        rewardToken[address(this)] -= rewardTokenToBeMoved;
 
         // burn tokens
         Transfer(msg.sender, 0, balances[msg.sender]);
@@ -348,8 +342,9 @@ contract DAO is DAOInterface, Token, TokenSale {
 
 
     function getMyReward() noEther external {
-        uint total = totalSupply + totalRewardRights;
-        uint myReward = (balanceOf(msg.sender) + rewardRights[msg.sender]) * rewardAccount.accumulatedInput() / total - payedOut[msg.sender]; // DANGER - 1024 stackdepth
+        // my share of the rewardToken of this DAO , or when called by a splitted child DAO, there portion of the rewardToken.
+        uint myShareOfTheReward = (balanceOf(msg.sender) * rewardToken[address(this)]) / totalSupply + rewardToken[msg.sender];
+        uint myReward = (myShareOfTheReward * rewardAccount.accumulatedInput()) / totalRewardToken - payedOut[msg.sender]; // DANGER - 1024 stackdepth
         if (!rewardAccount.payOut(msg.sender, myReward)) throw;
         payedOut[msg.sender] += myReward;
     }
