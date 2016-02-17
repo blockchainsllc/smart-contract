@@ -1,7 +1,7 @@
 /*
-This contract is intended for educational purposes, you are fully responsible
-for compliance with present or future regulations of finance, communications
-and the universal rights of digital beings.
+The user of this contract is fully responsible for compliance with 
+present or future regulations of finance, communications and the 
+universal rights of digital beings.
 
 Anyone is free to copy, modify, publish, use, compile, sell, or
 distribute this software, either in source code form or as a compiled
@@ -28,30 +28,30 @@ For more information, please refer to <http://unlicense.org>
 
 */
 
-/* Basic crowdsale contract. Allows to sell Tokens for the price of one Ether */
+/* Basic DAO Token Sale contract. Sell Tokens for the price of one Ether */
 
 import "./Token.sol";
 
-contract CrowdfundingInterface {
+contract DAOTokenSaleInterface {
 
-    uint public closingTime;                   // end of crowdfunding
-    uint public minValue;                      // minimal goal of crowdfunding
+    uint public closingTime;                   // end of token sale
+    uint public minValue;                      // minimal goal of token sale
     bool public funded;                        // true if project is funded, false otherwise
-    uint public weiRaised;                     // total amount of wei raised (needs to be calculated at the end by the DAO), for gasReasons to do not accumulate it during the presale
+    uint public weiRaised;                     // total amount of wei raised (needs to be calculated at the end by the DAO), for gasReasons to do not accumulate it during the token sale
 
     mapping (address => uint256) weiGiven;     // total amount of wei given to the DAO (needed for refund)
 
 
-    /// @dev Constructor setting the minimal target and the end of the crowdsale
-    /// @param _minValue Minimal value for a successful crowdfunding
-    /// @param _closingTime Date (in unix time) of the end of the crowdsale
-    //  function Crowdfunding(uint _minValue, uint _closingTime); // its commented out only because the constructor can not be overloaded
+    /// @dev Constructor setting the minimal target and the end of the DAO Token Sale
+    /// @param _minValue Minimal value for a successful DAO Token Sale
+    /// @param _closingTime Date (in unix time) of the end of the DAO Token Sale
+    //  function DAOTokenSale(uint _minValue, uint _closingTime); // it's commented out only because the constructor can not be overloaded
 
-    /// @notice Buy token with `_beneficiary` as the beneficiary.
-    /// @param _beneficiary The beneficary of the tokens bought with ether
-    function buyTokenProxy(address _beneficiary) returns (bool success);
+    /// @notice Buy token with `_tokenHolder` as the token holder.
+    /// @param _tokenHolder The address of the token holder that bought the tokens with ether
+    function buyTokenProxy(address _tokenHolder) returns (bool success);
 
-    /// @notice Refund `msg.sender` in the case of a not successful crowdfunding
+    /// @notice Refund `msg.sender` in the case of a not successful Token Sale
     function refund();
 
     event Funded(uint value);
@@ -59,22 +59,22 @@ contract CrowdfundingInterface {
     event Refund(address indexed to, uint value);
 }
 
-contract Crowdfunding is CrowdfundingInterface, Token {
+contract DAOTokenSale is DAOTokenSaleInterface, Token {
 
-    function Crowdfunding(uint _minValue, uint _closingTime) {
+    function DAOTokenSale(uint _minValue, uint _closingTime) {
         closingTime = _closingTime;
         minValue = _minValue;
     }
 
 
-    function buyTokenProxy(address _beneficiary) returns (bool success) {
+    function buyTokenProxy(address _tokenHolder) returns (bool success) {
         if (now < closingTime && msg.value > 0) {
             uint token = (tokenPriceMultiplier() * msg.value) / 10;
-            balances[_beneficiary] += token;
+            balances[_tokenHolder] += token;
             totalSupply += token;
-            weiGiven[_beneficiary] += msg.value;
+            weiGiven[_tokenHolder] += msg.value;
             weiRaised += msg.value;
-            SoldToken(_beneficiary, token);
+            SoldToken(_tokenHolder, token);
             if (weiRaised >= minValue && !funded) {
                 funded = true;
                 Funded(weiRaised);
