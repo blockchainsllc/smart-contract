@@ -2,9 +2,9 @@
 This creates a Democratic Autonomous Organization. Membership is based
 on ownership of custom tokens, which are used to vote on proposals.
 
-This contract is intended for educational purposes, you are fully responsible
-for compliance with present or future regulations of finance, communications
-and the universal rights of digital beings.
+The user of this contract is fully responsible for compliance with 
+present or future regulations of finance, communications and the 
+universal rights of digital beings.
 
 Anyone is free to copy, modify, publish, use, compile, sell, or
 distribute this software, either in source code form or as a compiled
@@ -31,7 +31,7 @@ For more information, please refer to <http://unlicense.org>
 
 */
 
-import "./Crowdfunding.sol";
+import "./DAOTokenSale.sol";
 import "./ManagedAccount.sol";
 
 contract DAOInterface {
@@ -51,11 +51,11 @@ contract DAOInterface {
     uint totalWeiSpendInSplits;
 
 
-    // account used to manage the rewards which are to be distributed to the Token holders seperately, so they don't appear in `this.balance`
+    // account used to manage the rewards which are to be distributed to the DAO Token Holders seperately, so they don't appear in `this.balance`
     ManagedAccount public rewardAccount;
     mapping (address => uint) public payedOut;
 
-    // deposit in weit to be paid for each proposal
+    // deposit in wei to be paid for each proposal
     uint public proposalDeposit;
 
     // contract which is able to create a new DAO (with the same code as this one), used for splits
@@ -113,14 +113,14 @@ contract DAOInterface {
 
     modifier onlyShareholders {}
 
-    /// @dev Constructor setting the default service provider and the address for the contract able to create another DAO as well as the parameter for the crowdfunding
+    /// @dev Constructor setting the default service provider and the address for the contract able to create another DAO as well as the parameter for the DAO Token Sale
     /// @param _defaultServiceProvider The default service provider
     /// @param _daoCreator The contract able to (re)create this DAO
-    /// @param _minValue Minimal value for a successful crowdfunding
-    /// @param _closingTime Date (in unix time) of the end of the crowdsale
+    /// @param _minValue Minimal value for a successful DAO Token Sale
+    /// @param _closingTime Date (in unix time) of the end of the DAO Token Sale
     //  function DAO(address _defaultServiceProvider, DAO_Creator _daoCreator, uint _minValue, uint _closingTime)  // its commented out only because the constructor can not be overloaded
 
-    /// @notice Buy token with `msg.sender` as the beneficiary as long as crowdfunding is not closed, otherwise call receiveDAOReward().
+    /// @notice Buy token with `msg.sender` as the beneficiary as long as the DAO Token Sale is not closed, otherwise call receiveDAOReward().
     function () returns (bool success);
 
     /// @dev function used to receive rewards as the DAO
@@ -129,7 +129,7 @@ contract DAOInterface {
 
     /// @notice `msg.sender` creates a proposal to send `_amount` Wei to `_recipient` with the transaction data `_transactionBytecode`. (If this is true: `_newServiceProvider`, then this is a proposal the set `_recipient` as the new service provider)
     /// @param _recipient The address of the recipient of the proposed transaction
-    /// @param _amount The amount of Wei to be sent with the proposed transaction
+    /// @param _amount The amount of wei to be sent with the proposed transaction
     /// @param _description A string describing the proposal
     /// @param _transactionBytecode The data of the proposed transaction
     /// @param _newServiceProvider A bool defining whether this proposal is about a new service provider or not
@@ -139,7 +139,7 @@ contract DAOInterface {
     /// @notice Check that the proposal with the ID `_proposalID` matches a transaction which sends `_amount` with this data: `_transactionBytecode` to `_recipient`
     /// @param _proposalID The proposal ID
     /// @param _recipient The recipient of the proposed transaction
-    /// @param _amount The amount of Wei to be sent with the proposed transaction
+    /// @param _amount The amount of wei to be sent with the proposed transaction
     /// @param _transactionBytecode The data of the proposed transaction
     /// @return Whether the proposal ID matches the transaction data or not
     function checkProposalCode(uint _proposalID, address _recipient, uint _amount, bytes _transactionBytecode) constant returns (bool _codeChecksOut);
@@ -171,7 +171,7 @@ contract DAOInterface {
     /// @param _proposalDeposit New proposal deposit
     function changeProposalDeposit(uint _proposalDeposit) external;
 
-    /// @notice get my share of the reward which has been send to `rewardAccount`
+    /// @notice get my portion of the reward which has been send to `rewardAccount`
     function getMyReward() external;
 
 
@@ -183,7 +183,7 @@ contract DAOInterface {
 }
 
 // The DAO contract itself
-contract DAO is DAOInterface, Token, Crowdfunding {
+contract DAO is DAOInterface, Token, DAOTokenSale {
 
     // modifier that allows only shareholders to vote and create new proposals
     modifier onlyShareholders {
@@ -192,7 +192,7 @@ contract DAO is DAOInterface, Token, Crowdfunding {
     }
 
 
-    function DAO(address _defaultServiceProvider, DAO_Creator _daoCreator, uint _minValue, uint _closingTime) Crowdfunding(_minValue, _closingTime) {
+    function DAO(address _defaultServiceProvider, DAO_Creator _daoCreator, uint _minValue, uint _closingTime) DAOTokenSale(_minValue, _closingTime) {
         serviceProvider = _defaultServiceProvider;
         daoCreator = _daoCreator;
         proposalDeposit = 20 ether;
@@ -203,7 +203,7 @@ contract DAO is DAOInterface, Token, Crowdfunding {
 
     function () returns (bool success) {
         // needed for a splitted DAO to receive its rewards of the parent DAO. The 40 days are a safety measure.
-        // No new DAO can be created withing this time, and in the case people accidently send Ether to the crowdsale, it will bounce back in the buyTokenProxy function
+        // No new DAO can be created withing this time, and in the case people accidently send Ether to the DAO Token Sale, it will bounce back in the buyTokenProxy function
         if (now > closingTime + 40 days)
             return receiveDAOReward();
         else
