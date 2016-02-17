@@ -32,7 +32,7 @@ For more information, please refer to <http://unlicense.org>
  This allows Exchanges to simply transfer money to an address which then will be forwarded to the DAO
  */
 
-import "./DAOTokenSale.sol";
+import "./TokenSale.sol";
 
 contract DAOTokenSaleProxyTransferer {
     address public owner;
@@ -55,7 +55,7 @@ contract DAOTokenSaleProxyTransferer {
     function sendValues() {
         if (this.balance == 0) return;
         
-        DAOTokenSaleInterface funding = DAOTokenSaleInterface(dao);
+        TokenSaleInterface funding = TokenSaleInterface(dao);
         if (now > funding.closingTime() || !funding.buyTokenProxy.value(this.balance)(owner))
            owner.send(this.balance);
     }

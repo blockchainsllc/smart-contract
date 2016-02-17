@@ -28,24 +28,24 @@ For more information, please refer to <http://unlicense.org>
 
 */
 
-/* Basic DAO Token Sale contract. Sell Tokens for the price of one Ether */
+/* Basic Token Sale contract */
 
 import "./Token.sol";
 
-contract DAOTokenSaleInterface {
+contract TokenSaleInterface {
 
     uint public closingTime;                   // end of token sale
     uint public minValue;                      // minimal goal of token sale
     bool public funded;                        // true if project is funded, false otherwise
-    uint public weiRaised;                     // total amount of wei raised (needs to be calculated at the end by the DAO), for gasReasons to do not accumulate it during the token sale
+    uint public weiRaised;                     // total amount of wei raised
 
-    mapping (address => uint256) weiGiven;     // total amount of wei given to the DAO (needed for refund)
+    mapping (address => uint256) weiGiven;     // total amount of wei given to the Token Sale (needed for refund)
 
 
-    /// @dev Constructor setting the minimal target and the end of the DAO Token Sale
-    /// @param _minValue Minimal value for a successful DAO Token Sale
-    /// @param _closingTime Date (in unix time) of the end of the DAO Token Sale
-    //  function DAOTokenSale(uint _minValue, uint _closingTime); // it's commented out only because the constructor can not be overloaded
+    /// @dev Constructor setting the minimal target and the end of the Token Sale
+    /// @param _minValue Minimal value for a successful Token Sale
+    /// @param _closingTime Date (in unix time) of the end of the Token Sale
+    //  function TokenSale(uint _minValue, uint _closingTime); // it's commented out only because the constructor can not be overloaded
 
     /// @notice Buy token with `_tokenHolder` as the token holder.
     /// @param _tokenHolder The address of the token holder that bought the tokens with ether
@@ -59,9 +59,9 @@ contract DAOTokenSaleInterface {
     event Refund(address indexed to, uint value);
 }
 
-contract DAOTokenSale is DAOTokenSaleInterface, Token {
+contract TokenSale is TokenSaleInterface, Token {
 
-    function DAOTokenSale(uint _minValue, uint _closingTime) {
+    function TokenSale(uint _minValue, uint _closingTime) {
         closingTime = _closingTime;
         minValue = _minValue;
     }

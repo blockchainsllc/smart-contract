@@ -19,7 +19,7 @@ contract SampleOffer
     DAO client; // address of DAO
 
     uint public rewardDivisor;
-    uint public deploymentFee;
+    uint public deploymentReward;
 
     modifier callingRestriction {
         if (promiseValid) {
@@ -35,7 +35,7 @@ contract SampleOffer
         _
     }
 
-    function SampleOffer(address _serviceProvider, bytes32 _hashOfTheContract, uint _totalCosts, uint _oneTimeCosts, uint _minDailyCosts, uint _feeDivisor, uint _deploymentFee) {
+    function SampleOffer(address _serviceProvider, bytes32 _hashOfTheContract, uint _totalCosts, uint _oneTimeCosts, uint _minDailyCosts, uint _rewardDivisor, uint _deploymentReward) {
         serviceProvider = _serviceProvider;
         hashOfTheContract = _hashOfTheContract;
         totalCosts = _totalCosts;
@@ -43,7 +43,7 @@ contract SampleOffer
         minDailyCosts = _minDailyCosts;
         dailyCosts = _minDailyCosts;
         rewardDivisor = _rewardDivisor;
-        deploymentFee = _deploymentFee;
+        deploymentReward = _deploymentReward;
     }
 
     function sign() {
@@ -76,14 +76,14 @@ contract SampleOffer
         rewardDivisor = _rewardDivisor;
     }
 
-    function setDeploymentFee(uint _deploymentFee) callingRestriction {
-        if (deploymentFee > 100 ether && msg.sender != address(client)) throw; // TODO, set a max defined by service provider, or ideally oracle (set in euro)
-        deploymentFee = _deploymentFee;
+    function setDeploymentFee(uint _deploymentReward) callingRestriction {
+        if (deploymentReward > 100 ether && msg.sender != address(client)) throw; // TODO, set a max defined by service provider, or ideally oracle (set in euro)
+        deploymentReward = _deploymentReward;
     }
 
     // interface for Slocks
-    function payOneTimeFee() returns(bool) {
-        if (msg.value < deploymentFee)
+    function payOneTimeReward() returns(bool) {
+        if (msg.value < deploymentReward)
             throw;
         if (promiseValid) {
             if (client.receiveDAOReward.value(msg.value)()) return true;

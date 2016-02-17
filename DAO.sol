@@ -31,7 +31,7 @@ For more information, please refer to <http://unlicense.org>
 
 */
 
-import "./DAOTokenSale.sol";
+import "./TokenSale.sol";
 import "./ManagedAccount.sol";
 
 contract DAOInterface {
@@ -183,7 +183,7 @@ contract DAOInterface {
 }
 
 // The DAO contract itself
-contract DAO is DAOInterface, Token, DAOTokenSale {
+contract DAO is DAOInterface, Token, TokenSale {
 
     // modifier that allows only shareholders to vote and create new proposals
     modifier onlyShareholders {
@@ -192,7 +192,7 @@ contract DAO is DAOInterface, Token, DAOTokenSale {
     }
 
 
-    function DAO(address _defaultServiceProvider, DAO_Creator _daoCreator, uint _minValue, uint _closingTime) DAOTokenSale(_minValue, _closingTime) {
+    function DAO(address _defaultServiceProvider, DAO_Creator _daoCreator, uint _minValue, uint _closingTime) TokenSale(_minValue, _closingTime) {
         serviceProvider = _defaultServiceProvider;
         daoCreator = _daoCreator;
         proposalDeposit = 20 ether;
