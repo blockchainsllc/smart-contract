@@ -311,7 +311,7 @@ contract DAO is DAOInterface, Token, TokenSale {
         // sanity check
         if (now < p.votingDeadline  // has the voting deadline arrived?
             || now > p.votingDeadline + 41 days
-            || p.recipient == _newServiceProvider // Does the new service provider address match?
+            || p.recipient != _newServiceProvider // Does the new service provider address match?
             || !p.newServiceProvider) // is it a new service provider proposal
             throw;
 
