@@ -1,7 +1,7 @@
 /*
-This contract is intended for educational purposes, you are fully responsible
-for compliance with present or future regulations of finance, communications
-and the universal rights of digital beings.
+The user of this contract is fully responsible for compliance with 
+present or future regulations of finance, communications and the 
+universal rights of digital beings.
 
 Anyone is free to copy, modify, publish, use, compile, sell, or
 distribute this software, either in source code form or as a compiled
@@ -32,18 +32,18 @@ For more information, please refer to <http://unlicense.org>
  This allows Exchanges to simply transfer money to an address which then will be forwarded to the DAO
  */
 
-import "./Crowdfunding.sol";
+import "./DAOTokenSale.sol";
 
-contract CrowdsaleProxyTransferer {
+contract DAOTokenSaleProxyTransferer {
     address public owner;
     address public dao;
 
     //constructor 
-    function CrowdsaleProxyTransferer(address _owner, address _dao) {
+    function DAOTokenSaleProxyTransferer(address _owner, address _dao) {
         owner = _owner;
         dao   = _dao;
         
-        // just in case somebody already added values to this address, we forward it right now.
+        // just in case somebody already added values to this address, we will forward it right now.
         sendValues();
     }
     
@@ -55,7 +55,7 @@ contract CrowdsaleProxyTransferer {
     function sendValues() {
         if (this.balance == 0) return;
         
-        CrowdfundingInterface funding = CrowdfundingInterface(dao);
+        DAOTokenSaleInterface funding = DAOTokenSaleInterface(dao);
         if (now > funding.closingTime() || !funding.buyTokenProxy.value(this.balance)(owner))
            owner.send(this.balance);
     }
