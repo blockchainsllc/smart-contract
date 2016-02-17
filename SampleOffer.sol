@@ -18,7 +18,7 @@ contract SampleOffer
     uint dateOfSignature;
     DAO client; // address of DAO
 
-    uint public feeDivisor;
+    uint public rewardDivisor;
     uint public deploymentFee;
 
     modifier callingRestriction {
@@ -42,7 +42,7 @@ contract SampleOffer
         oneTimeCosts = _oneTimeCosts;
         minDailyCosts = _minDailyCosts;
         dailyCosts = _minDailyCosts;
-        feeDivisor = _feeDivisor;
+        rewardDivisor = _rewardDivisor;
         deploymentFee = _deploymentFee;
     }
 
@@ -71,9 +71,9 @@ contract SampleOffer
             paidOut += amount;
     }
 
-    function setFeeDivisor(uint _feeDivisor) callingRestriction {
-        if (_feeDivisor < 50 && msg.sender != address(client)) throw; // 2%
-        feeDivisor = _feeDivisor;
+    function setRewardDivisor(uint _rewardDivisor) callingRestriction {
+        if (_rewardDivisor < 50 && msg.sender != address(client)) throw; // 2% is the default max reward
+        rewardDivisor = _rewardDivisor;
     }
 
     function setDeploymentFee(uint _deploymentFee) callingRestriction {
@@ -95,7 +95,7 @@ contract SampleOffer
         }
     }
 
-    // pay fee
+    // pay reward
     function () returns(bool) {
         if (promiseValid) {
             if (client.receiveDAOReward.value(msg.value)()) return true;
