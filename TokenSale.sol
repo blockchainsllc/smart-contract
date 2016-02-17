@@ -85,7 +85,7 @@ contract TokenSale is TokenSaleInterface, Token {
     }
 
 
-    function refund() {
+    function refund() noEther {
         if (now > closingTime
             && !funded
             && msg.sender.send(weiGiven[msg.sender])) // execute refund
@@ -99,7 +99,7 @@ contract TokenSale is TokenSaleInterface, Token {
     }
 
 
-    function tokenPriceMultiplier() constant returns(uint multiplier) {
+    function tokenPriceMultiplier() noEther constant returns(uint multiplier) {
         if (now < closingTime - 2 weeks)
             return 10;
         else if (now < closingTime - 4 days)

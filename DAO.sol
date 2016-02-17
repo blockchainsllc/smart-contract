@@ -245,13 +245,13 @@ contract DAO is DAOInterface, Token, TokenSale {
     }
 
 
-    function checkProposalCode(uint _proposalID, address _recipient, uint _amount, bytes _transactionBytecode) constant returns (bool _codeChecksOut) {
+    function checkProposalCode(uint _proposalID, address _recipient, uint _amount, bytes _transactionBytecode) noEther constant returns (bool _codeChecksOut) {
         Proposal p = proposals[_proposalID];
         return p.proposalHash == sha3(_recipient, _amount, _transactionBytecode);
     }
 
 
-    function vote(uint _proposalID, bool _supportsProposal) onlyShareholders returns (uint _voteID) {
+    function vote(uint _proposalID, bool _supportsProposal) onlyShareholders noEther returns (uint _voteID) {
         Proposal p = proposals[_proposalID];
         if (p.voted[msg.sender] || now >= p.votingDeadline) throw;
 
@@ -263,7 +263,7 @@ contract DAO is DAOInterface, Token, TokenSale {
     }
 
 
-    function executeProposal(uint _proposalID, bytes _transactionBytecode) returns (bool _success) {
+    function executeProposal(uint _proposalID, bytes _transactionBytecode) noEther returns (bool _success) {
         Proposal p = proposals[_proposalID];
         // Check if the proposal can be executed
         if (now < p.votingDeadline  // has the voting deadline arrived?
@@ -305,7 +305,7 @@ contract DAO is DAOInterface, Token, TokenSale {
     }
 
 
-    function confirmNewServiceProvider(uint _proposalID, address _newServiceProvider) onlyShareholders {
+    function confirmNewServiceProvider(uint _proposalID, address _newServiceProvider) noEther onlyShareholders {
         Proposal p = proposals[_proposalID];
 
         // sanity check
@@ -352,7 +352,7 @@ contract DAO is DAOInterface, Token, TokenSale {
     }
 
 
-    function getMyReward() external {
+    function getMyReward() noEther external {
         uint total = totalSupply + totalRewardRights;
         uint myReward = (balanceOf(msg.sender) + rewardRights[msg.sender]) * rewardAccount.accumulatedInput() / total - payedOut[msg.sender]; // DANGER - 1024 stackdepth
         if (!rewardAccount.payOut(msg.sender, myReward)) throw;
@@ -385,13 +385,13 @@ contract DAO is DAOInterface, Token, TokenSale {
     }
 
 
-    function changeProposalDeposit(uint _proposalDeposit) external {
+    function changeProposalDeposit(uint _proposalDeposit) noEther external {
         if (msg.sender != address(this) || _proposalDeposit > this.balance / 10) throw;
         proposalDeposit = _proposalDeposit;
     }
 
 
-    function addAllowedAddress(address _recipient) external {
+    function addAllowedAddress(address _recipient) noEther external {
         if (msg.sender != serviceProvider) throw;
         allowedRecipients.push(_recipient);
     }
