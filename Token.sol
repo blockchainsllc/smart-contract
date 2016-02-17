@@ -108,7 +108,7 @@ contract Token is TokenInterface {
         return true;
     }
 
-    function balanceOf(address _owner) noEther constant returns (uint256 balance) {
+    function balanceOf(address _owner) constant returns (uint256 balance) {
         return balances[_owner];
     }
 
