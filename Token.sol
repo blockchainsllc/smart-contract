@@ -1,7 +1,7 @@
 /*
-This contract is intended for educational purposes, you are fully responsible
-for compliance with present or future regulations of finance, communications
-and the universal rights of digital beings.
+The user of this contract is fully responsible for compliance with 
+present or future regulations of finance, communications and the 
+universal rights of digital beings.
 
 Anyone is free to copy, modify, publish, use, compile, sell, or
 distribute this software, either in source code form or as a compiled
@@ -27,7 +27,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 For more information, please refer to <http://unlicense.org>
 
 
-Most, basic default, standardised Token contract. No "pre-mine". Tokens need to be created by a derived contract (e.g. crowdsale)
+Most, basic default, standardised Token contract. No "pre-mine". Tokens need to be created by a derived contract (e.g. DAO Token Sale)
 
 Original taken from https://github.com/ConsenSys/Tokens/blob/master/Token_Contracts/contracts/Standard_Token.sol
 which is based on standardised APIs: https://github.com/ethereum/wiki/wiki/Standardized_Contract_APIs
