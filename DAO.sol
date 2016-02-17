@@ -222,6 +222,8 @@ contract DAO is DAOInterface, Token, TokenSale {
 
         if (!funded || now < closingTime || (msg.value < proposalDeposit && !_newServiceProvider)) throw;
 
+        if (_recipient == address(rewardAccount) && _amount > rewards) throw;
+
         _proposalID = proposals.length++;
         Proposal p = proposals[_proposalID];
         p.recipient = _recipient;
@@ -292,6 +294,8 @@ contract DAO is DAOInterface, Token, TokenSale {
             _success = true;
             rewardToken[address(this)] += p.amount;
             totalRewardToken += p.amount;
+            if (p.recipient == address(rewardAccount))
+                rewards -= p.amount;
         }
         else if (quorum >= minQuorum(p.amount) && nay >= yea) {
             p.openToVote = false;
@@ -402,7 +406,7 @@ contract DAO is DAOInterface, Token, TokenSale {
         if (_newServiceProvider)
             return 10 days;
         else
-            return 2 weeks + (_value * 31 days) / (weiRaised + rewards);    // minimum of two weeks and maximum of one month and two weeks (depending on the value to be transferred)
+            return 2 weeks + (_value * 31 days) / weiRaised;    // minimum of two weeks and maximum of one month and two weeks (depending on the value to be transferred)
     }
 
 
