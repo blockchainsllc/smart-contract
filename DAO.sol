@@ -223,7 +223,7 @@ contract DAO is DAOInterface, Token, TokenSale {
         }
         else if (!_newServiceProvider && !isRecipientAllowed(_recipient)) throw;
 
-        if (!funded || now < closingTime || msg.value < proposalDeposit) throw;
+        if (!funded || now < closingTime || (msg.value < proposalDeposit && !_newServiceProvider)) throw;
 
         _proposalID = proposals.length++;
         Proposal p = proposals[_proposalID];
@@ -328,11 +328,6 @@ contract DAO is DAOInterface, Token, TokenSale {
                 p.splitData[0].investedWei = 0;
             else
                 p.splitData[0].investedWei = p.splitData[0].totalWeiReceived - spentAndStored;
-        }
-
-        // refund proposal deposit
-        if (msg.sender == p.creator && p.proposalDeposit > 0 && p.creator.send(p.proposalDeposit)) {
-            p.proposalDeposit = 0;
         }
 
         // move funds and assign new Tokens
