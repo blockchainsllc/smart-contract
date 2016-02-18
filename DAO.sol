@@ -292,10 +292,12 @@ contract DAO is DAOInterface, Token, TokenSale {
             p.openToVote = false;
             p.proposalPassed = true;
             _success = true;
-            rewardToken[address(this)] += p.amount;
-            totalRewardToken += p.amount;
             if (p.recipient == address(rewardAccount))
                 rewards -= p.amount;
+            else {
+                rewardToken[address(this)] += p.amount;
+                totalRewardToken += p.amount;
+            }
         }
         else if (quorum >= minQuorum(p.amount) && nay >= yea) {
             p.openToVote = false;
