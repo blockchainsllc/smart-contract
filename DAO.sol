@@ -40,7 +40,7 @@ contract DAOInterface {
     Proposal[] public proposals;
     uint public numProposals; // TODO needed?
 
-    uint public rewards; // needed?
+    uint public rewards;
 
     address public serviceProvider;
     address[] public allowedRecipients;
