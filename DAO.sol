@@ -295,8 +295,10 @@ contract DAO is DAOInterface, Token, TokenSale {
             if (!p.recipient.call.value(p.amount)(_transactionBytecode)) throw;  // Without this throw, the creator of the proposal can repeat this, and get so much fund. //TODO need of specifiying gas?
             p.proposalPassed = true;
             _success = true;
-            if (p.recipient == address(rewardAccount))
+            if (p.recipient == address(rewardAccount)) {
+                if (rewards < p.amount) throw; // This happens when multiple similar proposals are created and both are passed at the same time.
                 rewards -= p.amount;
+            }
             else {
                 rewardToken[address(this)] += p.amount;
                 totalRewardToken += p.amount;
@@ -346,6 +348,7 @@ contract DAO is DAOInterface, Token, TokenSale {
         // assign reward rights to new DAO
         uint rewardTokenToBeMoved = (balances[msg.sender] * p.splitData[0].rewardToken) / p.splitData[0].totalSupply;
         rewardToken[address(p.splitData[0].newDAO)] += rewardTokenToBeMoved;
+        if (rewardToken[address(this)] < rewardTokenToBeMoved) throw;  // should not happen.
         rewardToken[address(this)] -= rewardTokenToBeMoved;
 
         // burn tokens
