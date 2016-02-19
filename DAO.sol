@@ -175,7 +175,7 @@ contract DAOInterface {
     event ProposalAdded(uint proposalID, address recipient, uint amount, string description);
     event Voted(uint proposalID, bool position, address indexed voter);
     event ProposalTallied(uint indexed proposalID, bool result, uint quorum);
-    event NewServiceProvider(address _newServiceProvider);
+    event NewServiceProvider(address indexed _newServiceProvider);
     event AllowedRecipientAdded(address indexed _recipient);
 }
 
