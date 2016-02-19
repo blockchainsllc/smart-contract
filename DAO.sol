@@ -174,7 +174,7 @@ contract DAOInterface {
 
     event ProposalAdded(uint proposalID, address recipient, uint amount, string description);
     event Voted(uint proposalID, bool position, address indexed voter);
-    event ProposalTallied(uint proposalID, bool result, uint quorum, bool active);
+    event ProposalTallied(uint indexed proposalID, bool result, uint quorum);
     event NewServiceProvider(address _newServiceProvider);
     event AllowedRecipientAdded(address indexed _recipient);
 }
@@ -289,7 +289,6 @@ contract DAO is DAOInterface, Token, TokenSale {
         if (quorum >= minQuorum(p.amount) && yea > nay) {
             if (!p.creator.send(p.proposalDeposit)) throw;
             if (!p.recipient.call.value(p.amount)(_transactionBytecode)) throw;  // Without this throw, the creator of the proposal can repeat this, and get so much fund. //TODO need of specifiying gas?
-            p.openToVote = false;
             p.proposalPassed = true;
             _success = true;
             if (p.recipient == address(rewardAccount))
@@ -300,13 +299,18 @@ contract DAO is DAOInterface, Token, TokenSale {
             }
         }
         else if (quorum >= minQuorum(p.amount) && nay >= yea) {
-            p.openToVote = false;
-            p.proposalPassed = false;
+            // p.proposalPassed = false; // That's the default.
             if (!p.creator.send(p.proposalDeposit)) throw;
         }
+        else {
+            // p.proposalPassed = false; // That's the default.
+        }
 
-        // fire event
-        ProposalTallied(_proposalID, _success, quorum, p.openToVote);
+        // Since the voting deadline is over, there is no point in counting again.
+        p.openToVote = false;
+
+        // Fire event.
+        ProposalTallied(_proposalID, _success, quorum);
     }
 
 
