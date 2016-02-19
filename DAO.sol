@@ -220,7 +220,7 @@ contract DAO is DAOInterface, Token, TokenSale {
         }
         else if (!_newServiceProvider && !isRecipientAllowed(_recipient)) throw;
 
-        if (!funded || now < closingTime || (msg.value < proposalDeposit && !_newServiceProvider)) throw;
+        if (!funded || now < closingTime || (msg.value < proposalDeposit && !_newServiceProvider) || (msg.value > 0 && _newServiceProvider)) throw;
 
         if (_recipient == address(rewardAccount) && _amount > rewards) throw;
 
