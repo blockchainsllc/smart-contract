@@ -55,7 +55,7 @@ contract TokenSaleInterface {
     function refund();
 
     event Funded(uint value);
-    event SoldToken(address indexed to, uint value);
+    event SoldToken(address indexed to, uint numToken, uint value);
     event Refund(address indexed to, uint value);
 }
 
@@ -74,7 +74,7 @@ contract TokenSale is TokenSaleInterface, Token {
             totalSupply += token;
             weiGiven[_tokenHolder] += msg.value;
             weiRaised += msg.value;
-            SoldToken(_tokenHolder, token);
+            SoldToken(_tokenHolder, token, msg.value);
             if (weiRaised >= minValue && !funded) {
                 funded = true;
                 Funded(weiRaised);
