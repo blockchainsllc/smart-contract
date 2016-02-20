@@ -357,7 +357,7 @@ contract DAO is DAOInterface, Token, TokenSale {
 
 
     function transfer(address _to, uint256 _value) returns (bool success) {
-        if (super.transfer(_to, _value) && transferPayedOut(msg.sender, _to, _value)){
+        if (transferPayedOut(msg.sender, _to, _value) && super.transfer(_to, _value)){
             return true;
         }
         else throw;
@@ -365,7 +365,7 @@ contract DAO is DAOInterface, Token, TokenSale {
 
 
     function transferFrom(address _from, address _to, uint256 _value) returns (bool success) {
-        if (super.transferFrom(_from, _to, _value) && transferPayedOut(_from, _to, _value)){
+        if (transferPayedOut(_from, _to, _value) && super.transferFrom(_from, _to, _value)){
             return true;
         }
         else throw;
