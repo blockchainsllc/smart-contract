@@ -110,7 +110,7 @@ contract DAOInterface {
         uint totalSupply;
         // Amount of rewardToken owned by the DAO at the time of split.
         uint rewardToken;
-        // Used only in the case of a newServiceProvider porposal. Represents the new DAO contract.
+        // Used only in the case of a newServiceProvider proposal. Represents the new DAO contract.
         DAO newDAO;
     }
 
@@ -139,7 +139,7 @@ contract DAOInterface {
     function receiveDAOReward() returns(bool);
 
     /// @notice `msg.sender` creates a proposal to send `_amount` Wei to `_recipient` with the transaction data `_transactionBytecode`.
-    ///         (If `_newServiceProvider` is true, then this is a proposal that splits the DAO and set `_recipient` as the new DAO's new service provider)
+    ///         (If `_newServiceProvider` is true, then this is a proposal that splits the DAO and sets `_recipient` as the new DAO's new service provider)
     /// @param _recipient The address of the recipient of the proposed transaction
     /// @param _amount The amount of wei to be sent with the proposed transaction
     /// @param _description A string describing the proposal
@@ -188,7 +188,7 @@ contract DAOInterface {
     /// @dev Can only be called by this DAO (through proposals with its recipient being this DAO itself)
     function changeProposalDeposit(uint _proposalDeposit) external;
 
-    /// @notice get my portion of the reward which has been send to `rewardAccount`
+    /// @notice get my portion of the reward which has been sent to `rewardAccount`
     function getMyReward() external;
 
 
@@ -221,8 +221,8 @@ contract DAO is DAOInterface, Token, TokenSale {
 
 
     function () returns (bool success) {
-        // The first clause is needed for a splitted DAO to receive its rewards of the parent DAO. The 40 days are a safety measure.
-        // No new DAO can be created within this time, and in the case people accidently send ether to the DAO Token Sale, it will bounce back in the buyTokenProxy function
+        // The first clause is needed for a split DAO to receive its rewards of the parent DAO. The 40 days are a safety measure.
+        // No new DAO can be created within this time, and in the case people accidentally send ether to the DAO Token Sale, it will bounce back in the buyTokenProxy function
         if (now > closingTime + 40 days)
             return receiveDAOReward();
         else
@@ -375,7 +375,7 @@ contract DAO is DAOInterface, Token, TokenSale {
 
 
     function getMyReward() noEther external {
-        // my share of the rewardToken of this DAO, or when called by a splitted child DAO, there portion of the rewardToken.
+        // my share of the rewardToken of this DAO, or when called by a split child DAO, their portion of the rewardToken.
         uint myShareOfTheReward = (balanceOf(msg.sender) * rewardToken[address(this)]) / totalSupply + rewardToken[msg.sender];
         uint myReward = (myShareOfTheReward * rewardAccount.accumulatedInput()) / totalRewardToken - payedOut[msg.sender];
         if (!rewardAccount.payOut(msg.sender, myReward)) throw;
