@@ -36,7 +36,7 @@ import "./ManagedAccount.sol";
 
 contract DAOInterface {
 
-    // Contract Variables and events
+    // contract variables and events
     Proposal[] public proposals;
     uint public numProposals; // TODO needed?
 
@@ -45,20 +45,23 @@ contract DAOInterface {
     address public serviceProvider;
     address[] public allowedRecipients;
 
-    //only used for splits, give DAOs without a balance the privilige to access their share of the rewards
+    // only used for splits, give DAOs without a balance the privilige to access their share of the rewards
+    // conceptually, rewardTokens represents a share of right to receive rewards that arise from the already spent fund.
     mapping (address => uint) public rewardToken;
     uint public totalRewardToken;
 
-    // account used to manage the rewards which are to be distributed to the DAO Token Holders seperately, so they don't appear in `this.balance`
+    // account used to manage the rewards which are to be distributed to the DAO Token Holders (and reward token holders) seperately, so they don't appear in `this.balance`
     ManagedAccount public rewardAccount;
     mapping (address => uint) public payedOut;
 
-    // deposit in wei to be paid for each proposal
+    // deposit in wei to be held for each proposal
     uint public proposalDeposit;
 
     // contract which is able to create a new DAO (with the same code as this one), used for splits
     DAO_Creator public daoCreator;
 
+    // A proposal with `newServiceProvider == false` represents a transaction issued by this DAO.
+    // A proposal with `newServiceProvider == true` represents a DAO split proposal.
     struct Proposal {
         // The address where the `amount` will go to if the proposal is accepted.
         address recipient;
@@ -66,16 +69,16 @@ contract DAOInterface {
         uint amount;
         // A plain text description of the proposal
         string description;
-        // a Unix timestamp, denoting the end of the voting period
+        // A Unix timestamp, denoting the end of the voting period
         uint votingDeadline;
-        // True if the proposal is open for voting, false if it has already been voted for/against
+        // True if the proposal is open for voting, false if the votes have already been counted
         bool openToVote;
-        // True if the porposal has been voted for, False if voted against
+        // True if the sufficient votes have been counted with the majority saying yes.
         bool proposalPassed;
         uint numberOfVotes; // TODO is this needed?
         // A hash to check validity of a proposal. Equal to sha3(_recipient, _amount, _transactionBytecode)
         bytes32 proposalHash;
-        // The deposit in wei the creator puts in the proposal. Is taken as the msg.value of a newProposal call
+        // The deposit in wei the creator puts in the proposal. Is taken from the msg.value of a newProposal call.
         uint proposalDeposit;
         // True if this proposal is to assign a new service provider
         bool newServiceProvider;
@@ -89,20 +92,20 @@ contract DAOInterface {
         address creator;
     }
 
-    //Used only in the case of a newServiceProvider porposal.
+    // Used only in the case of a newServiceProvider porposal.
     struct SplitData {
-        // is the balance of the current DAO minus the deposit at the time of split.
+        // Is the balance of the current DAO minus the deposit at the time of split.
         uint splitBalance;
-        //  represents the total amount of token in existence at the time of split.
+        // Represents the total amount of token in existence at the time of split.
         uint totalSupply;
-        // amount of rewardToken owner by the DAO at the time of split
+        // Amount of rewardToken owned by the DAO at the time of split.
         uint rewardToken;
         // Used only in the case of a newServiceProvider porposal. Represents the new DAO contract.
         DAO newDAO;
     }
 
     struct Vote {
-        // True for 'yay', False for 'nay'
+        // True for 'yay', false for 'nay'
         bool inSupport;
         // The address of the voter
         address voter;
@@ -124,7 +127,7 @@ contract DAOInterface {
     /// @return Whether the call to this function was successful or not
     function receiveDAOReward() returns(bool);
 
-    /// @notice `msg.sender` creates a proposal to send `_amount` Wei to `_recipient` with the transaction data `_transactionBytecode`. (If this is true: `_newServiceProvider`, then this is a proposal the set `_recipient` as the new service provider)
+    /// @notice `msg.sender` creates a proposal to send `_amount` Wei to `_recipient` with the transaction data `_transactionBytecode`. (If this is true: `_newServiceProvider`, then this is a proposal that splits the DAO and set `_recipient` as the new DAO's new service provider)
     /// @param _recipient The address of the recipient of the proposed transaction
     /// @param _amount The amount of wei to be sent with the proposed transaction
     /// @param _description A string describing the proposal
@@ -133,7 +136,7 @@ contract DAOInterface {
     /// @return The proposal ID. Needed for voting on the proposal
     function newProposal(address _recipient, uint _amount, string _description, bytes _transactionBytecode, bool _newServiceProvider) onlyShareholders returns (uint _proposalID);
 
-    /// @notice Check that the proposal with the ID `_proposalID` matches a transaction which sends `_amount` with this data: `_transactionBytecode` to `_recipient`
+    /// @notice Check that the proposal with the ID `_proposalID` matches a transaction which sends `_amount` with data `_transactionBytecode` to `_recipient`
     /// @param _proposalID The proposal ID
     /// @param _recipient The recipient of the proposed transaction
     /// @param _amount The amount of wei to be sent with the proposed transaction
@@ -156,7 +159,7 @@ contract DAOInterface {
     /// @notice ATTENTION! I confirm to move my remaining funds to a new DAO with `_newServiceProvider` as the new service provider, as has been proposed in proposal `_proposalID`. This will burn my tokens. This can not be undone and will split the DAO into two DAO's, with two underlying tokens.
     /// @param _proposalID The proposal ID
     /// @param _newServiceProvider The new service provider of the new DAO
-    /// @dev This function, when called for the first time for this proposal, will create a new DAO and send the portion of the remaining funds which can be attributed to the sender to the new DAO. It will also burn the tokens of the sender.
+    /// @dev This function, when called for the first time for this proposal, will create a new DAO and send the portion of the remaining funds which can be attributed to the sender to the new DAO. It will also burn the Tokens of the sender. (TODO: document rewardTokens)
     function confirmNewServiceProvider(uint _proposalID, address _newServiceProvider);
 
     /// @notice add new possible recipient `_recipient` for transactions from the DAO (through proposals)
@@ -166,6 +169,7 @@ contract DAOInterface {
 
     /// @notice change the deposit needed to make a proposal to `_proposalDeposit`
     /// @param _proposalDeposit New proposal deposit
+    /// @dev Can only be called by this DAO (through proposals with its recipient being this DAO itself)
     function changeProposalDeposit(uint _proposalDeposit) external;
 
     /// @notice get my portion of the reward which has been send to `rewardAccount`
@@ -174,8 +178,8 @@ contract DAOInterface {
 
     event ProposalAdded(uint proposalID, address recipient, uint amount, string description);
     event Voted(uint proposalID, bool position, address indexed voter);
-    event ProposalTallied(uint proposalID, bool result, uint quorum, bool active);
-    event NewServiceProvider(address _newServiceProvider);
+    event ProposalTallied(uint indexed proposalID, bool result, uint quorum);
+    event NewServiceProvider(address indexed _newServiceProvider);
     event AllowedRecipientAdded(address indexed _recipient);
 }
 
@@ -199,8 +203,8 @@ contract DAO is DAOInterface, Token, TokenSale {
 
 
     function () returns (bool success) {
-        // needed for a splitted DAO to receive its rewards of the parent DAO. The 40 days are a safety measure.
-        // No new DAO can be created withing this time, and in the case people accidently send Ether to the DAO Token Sale, it will bounce back in the buyTokenProxy function
+        // The first clause is needed for a splitted DAO to receive its rewards of the parent DAO. The 40 days are a safety measure.
+        // No new DAO can be created within this time, and in the case people accidently send Ether to the DAO Token Sale, it will bounce back in the buyTokenProxy function
         if (now > closingTime + 40 days)
             return receiveDAOReward();
         else
@@ -220,7 +224,7 @@ contract DAO is DAOInterface, Token, TokenSale {
         }
         else if (!_newServiceProvider && !isRecipientAllowed(_recipient)) throw;
 
-        if (!funded || now < closingTime || (msg.value < proposalDeposit && !_newServiceProvider)) throw;
+        if (!funded || now < closingTime || (msg.value < proposalDeposit && !_newServiceProvider) || (msg.value > 0 && _newServiceProvider)) throw;
 
         if (_recipient == address(rewardAccount) && _amount > rewards) throw;
 
@@ -266,7 +270,7 @@ contract DAO is DAOInterface, Token, TokenSale {
         Proposal p = proposals[_proposalID];
         // Check if the proposal can be executed
         if (now < p.votingDeadline  // has the voting deadline arrived?
-            || !p.openToVote        // has it been already executed?
+            || !p.openToVote        // have the votes been counted?
             || p.newServiceProvider // new service provider proposal get confirmed not executed
             || p.proposalHash != sha3(p.recipient, p.amount, _transactionBytecode)) // Does the transaction code match the proposal?
             throw;
@@ -289,24 +293,30 @@ contract DAO is DAOInterface, Token, TokenSale {
         if (quorum >= minQuorum(p.amount) && yea > nay) {
             if (!p.creator.send(p.proposalDeposit)) throw;
             if (!p.recipient.call.value(p.amount)(_transactionBytecode)) throw;  // Without this throw, the creator of the proposal can repeat this, and get so much fund. //TODO need of specifiying gas?
-            p.openToVote = false;
             p.proposalPassed = true;
             _success = true;
-            if (p.recipient == address(rewardAccount))
+            if (p.recipient == address(rewardAccount)) {
+                if (rewards < p.amount) throw; // This happens when multiple similar proposals are created and both are passed at the same time.
                 rewards -= p.amount;
+            }
             else {
                 rewardToken[address(this)] += p.amount;
                 totalRewardToken += p.amount;
             }
         }
         else if (quorum >= minQuorum(p.amount) && nay >= yea) {
-            p.openToVote = false;
-            p.proposalPassed = false;
+            // p.proposalPassed = false; // That's the default.
             if (!p.creator.send(p.proposalDeposit)) throw;
         }
+        else {
+            // p.proposalPassed = false; // That's the default.
+        }
 
-        // fire event
-        ProposalTallied(_proposalID, _success, quorum, p.openToVote);
+        // Since the voting deadline is over, there is no point in counting again.
+        p.openToVote = false;
+
+        // Fire event.
+        ProposalTallied(_proposalID, _success, quorum);
     }
 
 
@@ -317,14 +327,14 @@ contract DAO is DAOInterface, Token, TokenSale {
         if (now < p.votingDeadline  // has the voting deadline arrived?
             || now > p.votingDeadline + 41 days
             || p.recipient != _newServiceProvider // Does the new service provider address match?
-            || !p.newServiceProvider) // is it a new service provider proposal
+            || !p.newServiceProvider) // is it a new service provider proposal?
             throw;
 
-        // if not already happened, create new DAO and store the current split data
+        // if not already happened, create a new DAO and store the current split data
         if (address(p.splitData[0].newDAO) == 0) {
             p.splitData[0].newDAO = createNewDAO(_newServiceProvider);
             if (address(p.splitData[0].newDAO) == 0) throw; // Call depth limit reached, etc.
-            if (this.balance < p.proposalDeposit) throw;
+            if (this.balance < p.proposalDeposit) throw; // p.proposalDeposit should be zero here.
             p.splitData[0].splitBalance = this.balance - p.proposalDeposit;
             p.splitData[0].rewardToken = rewardToken[address(this)];
             p.splitData[0].totalSupply = totalSupply;
@@ -338,6 +348,7 @@ contract DAO is DAOInterface, Token, TokenSale {
         // assign reward rights to new DAO
         uint rewardTokenToBeMoved = (balances[msg.sender] * p.splitData[0].rewardToken) / p.splitData[0].totalSupply;
         rewardToken[address(p.splitData[0].newDAO)] += rewardTokenToBeMoved;
+        if (rewardToken[address(this)] < rewardTokenToBeMoved) throw;  // should not happen.
         rewardToken[address(this)] -= rewardTokenToBeMoved;
 
         // burn tokens
@@ -348,7 +359,7 @@ contract DAO is DAOInterface, Token, TokenSale {
 
 
     function getMyReward() noEther external {
-        // my share of the rewardToken of this DAO , or when called by a splitted child DAO, there portion of the rewardToken.
+        // my share of the rewardToken of this DAO, or when called by a splitted child DAO, there portion of the rewardToken.
         uint myShareOfTheReward = (balanceOf(msg.sender) * rewardToken[address(this)]) / totalSupply + rewardToken[msg.sender];
         uint myReward = (myShareOfTheReward * rewardAccount.accumulatedInput()) / totalRewardToken - payedOut[msg.sender]; // DANGER - 1024 stackdepth
         if (!rewardAccount.payOut(msg.sender, myReward)) throw;
