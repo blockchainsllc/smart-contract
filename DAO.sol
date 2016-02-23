@@ -273,6 +273,7 @@ contract DAO is DAOInterface, Token, TokenSale {
         p.votes[_voteID] = Vote({inSupport: _supportsProposal, voter: msg.sender});
         p.voted[msg.sender] = true;
         Voted(_proposalID, _supportsProposal, msg.sender);
+        lastInteraction[msg.sender] = now;
     }
 
 
@@ -363,6 +364,7 @@ contract DAO is DAOInterface, Token, TokenSale {
         Transfer(msg.sender, 0, balances[msg.sender]);
         totalSupply -= balances[msg.sender];
         balances[msg.sender] = 0;
+        lastInteraction[msg.sender] = now;
     }
 
 
@@ -372,11 +374,13 @@ contract DAO is DAOInterface, Token, TokenSale {
         uint myReward = (myShareOfTheReward * rewardAccount.accumulatedInput()) / totalRewardToken - payedOut[msg.sender];
         if (!rewardAccount.payOut(msg.sender, myReward)) throw;
         payedOut[msg.sender] += myReward;
+        lastInteraction[msg.sender] = now;
     }
 
 
     function transfer(address _to, uint256 _value) returns (bool success) {
         if (funded && now > closingTime && transferPayedOut(msg.sender, _to, _value) && super.transfer(_to, _value)){
+            if (lastInteraction[_to] == 0) lastInteraction[_to] = now;
             return true;
         }
         else throw;
@@ -385,6 +389,7 @@ contract DAO is DAOInterface, Token, TokenSale {
 
     function transferFrom(address _from, address _to, uint256 _value) returns (bool success) {
         if (funded && now > closingTime && transferPayedOut(_from, _to, _value) && super.transferFrom(_from, _to, _value)){
+            if (lastInteraction[_to] == 0) lastInteraction[_to] = now;
             return true;
         }
         else throw;
