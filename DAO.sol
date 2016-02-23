@@ -174,6 +174,11 @@ contract DAOInterface {
     ///      funds which can be attributed to the sender to the new DAO. It will also burn the Tokens of the sender. (TODO: document rewardTokens)
     function confirmNewServiceProvider(uint _proposalID, address _newServiceProvider);
 
+    /// @notice Make the DAO repay a dormant account with the fair share of Ether balance and future rewards
+    /// @param _dormant The address of the account to be liquidated.  This account should not have participated in any votes or proposals for 6 months.
+    /// @return Whether the repay has been successful
+    function repayDormantAccount(address _dormant) returns (bool _success);
+
     /// @notice add new possible recipient `_recipient` for transactions from the DAO (through proposals)
     /// @param _recipient New recipient address
     /// @dev Can only be called by the current service provider
@@ -365,6 +370,26 @@ contract DAO is DAOInterface, Token, TokenSale {
         totalSupply -= balances[msg.sender];
         balances[msg.sender] = 0;
         lastInteraction[msg.sender] = now;
+    }
+
+
+    // repay a dormant account with the fair share of Ether balance and future rewards
+    function repayDormantAccount(address _dormant) returns (bool _success) {
+        if (lastInteraction[_dormant] == 0 || lastInteraction[_dormant] + 6 * 31 days >= now) throw;
+
+        uint fundsToBeMoved = (balances[_dormant] * this.balance) / totalSupply;
+        if (!_dormant.send(fundsToBeMoved)) throw;
+
+        uint rewardTokenToBeMoved = (balances[_dormant] * rewardToken[address(this)]) / totalSupply;
+        rewardToken[_dormant] += rewardTokenToBeMoved;
+        if (rewardToken[address(this)] < rewardTokenToBeMoved) throw;  // should not happen.
+        rewardToken[address(this)] -= rewardTokenToBeMoved;
+
+        Transfer(_dormant, 0, balances[_dormant]);
+        totalSupply -= balances[_dormant];
+        balances[_dormant] = 0;
+
+        return true;
     }
 
 
