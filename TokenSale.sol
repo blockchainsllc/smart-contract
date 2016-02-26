@@ -26,9 +26,8 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 For more information, please refer to <http://unlicense.org>
 
+Basic Token Sale contract
 */
-
-/* Basic Token Sale contract */
 
 import "./Token.sol";
 
@@ -41,11 +40,10 @@ contract TokenSaleInterface {
 
     mapping (address => uint256) weiGiven;     // total amount of wei given to the Token Sale (needed for refund)
 
-
     /// @dev Constructor setting the minimal target and the end of the Token Sale
     /// @param _minValue Minimal value for a successful Token Sale
     /// @param _closingTime Date (in unix time) of the end of the Token Sale
-    //  function TokenSale(uint _minValue, uint _closingTime); // it's commented out only because the constructor can not be overloaded
+    //  function TokenSale(uint _minValue, uint _closingTime);
 
     /// @notice buy token with `_tokenHolder` as the token holder.
     /// @param _tokenHolder The address of the receiver of the tokens

@@ -45,9 +45,11 @@ contract ManagedAccount is ManagedAccountInterface{
         owner = _owner;
     }
 
+
     function(){
         accumulatedInput += msg.value;
     }
+
 
     function payOut(address _recipient, uint _amount) returns (bool){
         if (msg.sender != owner || msg.value > 0) throw;

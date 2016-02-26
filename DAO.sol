@@ -289,7 +289,7 @@ contract DAO is DAOInterface, Token, TokenSale {
         uint yea = 0;
         uint nay = 0;
 
-        for (uint i = 0; i < p.votes.length; ++i) {
+        for (uint i = 0; i < p.votes.length; ++i) { //DANGER - unbound loop
             Vote v = p.votes[i];
             uint voteWeight = balanceOf(v.voter);
             if (v.inSupport)
