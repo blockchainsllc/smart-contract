@@ -47,12 +47,15 @@ contract TokenSaleInterface {
     /// @param _closingTime Date (in unix time) of the end of the Token Sale
     //  function TokenSale(uint _minValue, uint _closingTime); // it's commented out only because the constructor can not be overloaded
 
-    /// @notice Buy token with `_tokenHolder` as the token holder.
-    /// @param _tokenHolder The address of the token holder that bought the tokens with ether
+    /// @notice buy token with `_tokenHolder` as the token holder.
+    /// @param _tokenHolder The address of the receiver of the tokens
     function buyTokenProxy(address _tokenHolder) returns (bool success);
 
     /// @notice Refund `msg.sender` in the case of a not successful Token Sale
     function refund();
+
+    /// @return current price multiplier. A number between 10 and 5. Which when used gets divided by 10.
+	function tokenPriceMultiplier() constant returns(uint multiplier);
 
     event Funded(uint value);
     event SoldToken(address indexed to, uint numToken, uint value);
