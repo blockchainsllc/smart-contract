@@ -29,6 +29,8 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 For more information, please refer to <http://unlicense.org>
 
+Generic contract for a decentralized autonomous organisation to manage a trust
+
 */
 
 import "./TokenSale.sol";
@@ -36,21 +38,27 @@ import "./ManagedAccount.sol";
 
 contract DAOInterface {
 
-    // contract variables and events
+    // proposals to spend ether of the DAO or choose a new service provider
     Proposal[] public proposals;
 
+    // to total amount of wei received as reward which has not been sent to the rewardAccount
     uint public rewards;
 
-    address public serviceProvider;
+    // address of the service provider
+	address public serviceProvider;
+    // list of addresses the DAO is allowed to send money to
     address[] public allowedRecipients;
 
     // only used for splits, give DAOs without a balance the privilige to access their share of the rewards
     // conceptually, rewardTokens represents a share of right to receive rewards that arise from the already spent fund.
     mapping (address => uint) public rewardToken;
+    // sum of all rewardToken
     uint public totalRewardToken;
 
-    // account used to manage the rewards which are to be distributed to the DAO Token Holders (and reward token holders) seperately, so they don't appear in `this.balance`
+    // account used to manage the rewards which are to be distributed to the
+    // DAO Token Holders (and reward token holders) seperately, so they don't appear in `this.balance`
     ManagedAccount public rewardAccount;
+    // amount of wei already payed out to a certain member address
     mapping (address => uint) public payedOut;
 
     // deposit in wei to be held for each proposal
@@ -111,12 +119,13 @@ contract DAOInterface {
 
     modifier onlyShareholders {}
 
-    /// @dev Constructor setting the default service provider and the address for the contract able to create another DAO as well as the parameter for the DAO Token Sale
+    /// @dev Constructor setting the default service provider and the address for the contract able
+    ///      to create another DAO as well as the parameters for the DAO Token Sale
     /// @param _defaultServiceProvider The default service provider
     /// @param _daoCreator The contract able to (re)create this DAO
     /// @param _minValue Minimal value for a successful DAO Token Sale
     /// @param _closingTime Date (in unix time) of the end of the DAO Token Sale
-    //  function DAO(address _defaultServiceProvider, DAO_Creator _daoCreator, uint _minValue, uint _closingTime)  // its commented out only because the constructor can not be overloaded
+    //  function DAO(address _defaultServiceProvider, DAO_Creator _daoCreator, uint _minValue, uint _closingTime)
 
     /// @notice Buy token with `msg.sender` as the beneficiary as long as the DAO Token Sale is not closed, otherwise call receiveDAOReward().
     function () returns (bool success);
@@ -125,7 +134,8 @@ contract DAOInterface {
     /// @return Whether the call to this function was successful or not
     function receiveDAOReward() returns(bool);
 
-    /// @notice `msg.sender` creates a proposal to send `_amount` Wei to `_recipient` with the transaction data `_transactionBytecode`. (If this is true: `_newServiceProvider`, then this is a proposal that splits the DAO and set `_recipient` as the new DAO's new service provider)
+    /// @notice `msg.sender` creates a proposal to send `_amount` Wei to `_recipient` with the transaction data `_transactionBytecode`.
+    ///         (If `_newServiceProvider` is true, then this is a proposal that splits the DAO and set `_recipient` as the new DAO's new service provider)
     /// @param _recipient The address of the recipient of the proposed transaction
     /// @param _amount The amount of wei to be sent with the proposed transaction
     /// @param _description A string describing the proposal
@@ -148,16 +158,20 @@ contract DAOInterface {
     /// @return The vote ID.
     function vote(uint _proposalID, bool _supportsProposal) onlyShareholders returns (uint _voteID);
 
-    /// @notice Checks whether proposal `_proposalID` with transaction data `_transactionBytecode` has been voted for or rejected, and executes the transaction in the case it has been voted for.
+    /// @notice Checks whether proposal `_proposalID` with transaction data `_transactionBytecode` has been voted for or rejected,
+    ///         and executes the transaction in the case it has been voted for.
     /// @param _proposalID The proposal ID
     /// @param _transactionBytecode The data of the proposed transaction // TODO is this needed
     /// @return Whether the proposed transaction has been executed or not
     function executeProposal(uint _proposalID, bytes _transactionBytecode) returns (bool _success);
 
-    /// @notice ATTENTION! I confirm to move my remaining funds to a new DAO with `_newServiceProvider` as the new service provider, as has been proposed in proposal `_proposalID`. This will burn my tokens. This can not be undone and will split the DAO into two DAO's, with two underlying tokens.
+    /// @notice ATTENTION! I confirm to move my remaining funds to a new DAO with `_newServiceProvider` as the new service provider,
+    ///         as has been proposed in proposal `_proposalID`. This will burn my tokens. This can not be undone and will split the
+    ///         DAO into two DAO's, with two underlying tokens.
     /// @param _proposalID The proposal ID
     /// @param _newServiceProvider The new service provider of the new DAO
-    /// @dev This function, when called for the first time for this proposal, will create a new DAO and send the portion of the remaining funds which can be attributed to the sender to the new DAO. It will also burn the Tokens of the sender. (TODO: document rewardTokens)
+    /// @dev This function, when called for the first time for this proposal, will create a new DAO and send the portion of the remaining
+    ///      funds which can be attributed to the sender to the new DAO. It will also burn the Tokens of the sender. (TODO: document rewardTokens)
     function confirmNewServiceProvider(uint _proposalID, address _newServiceProvider);
 
     /// @notice add new possible recipient `_recipient` for transactions from the DAO (through proposals)
@@ -202,12 +216,13 @@ contract DAO is DAOInterface, Token, TokenSale {
 
     function () returns (bool success) {
         // The first clause is needed for a splitted DAO to receive its rewards of the parent DAO. The 40 days are a safety measure.
-        // No new DAO can be created within this time, and in the case people accidently send Ether to the DAO Token Sale, it will bounce back in the buyTokenProxy function
+        // No new DAO can be created within this time, and in the case people accidently send ether to the DAO Token Sale, it will bounce back in the buyTokenProxy function
         if (now > closingTime + 40 days)
             return receiveDAOReward();
         else
             return buyTokenProxy(msg.sender);
     }
+
 
     function receiveDAOReward() returns(bool) {
         rewards += msg.value;
@@ -217,12 +232,12 @@ contract DAO is DAOInterface, Token, TokenSale {
 
     function newProposal(address _recipient, uint _amount, string _description, bytes _transactionBytecode, bool _newServiceProvider) onlyShareholders returns (uint _proposalID) {
         // check sanity
-        if (_newServiceProvider && (_amount != 0 || _transactionBytecode.length != 0 || _recipient == serviceProvider)) {
+        if (_newServiceProvider && (_amount != 0 || _transactionBytecode.length != 0 || _recipient == serviceProvider || msg.value > 0)) {
             throw;
         }
         else if (!_newServiceProvider && !isRecipientAllowed(_recipient)) throw;
 
-        if (!funded || now < closingTime || (msg.value < proposalDeposit && !_newServiceProvider) || (msg.value > 0 && _newServiceProvider)) throw;
+        if (!funded || now < closingTime || (msg.value < proposalDeposit && !_newServiceProvider)) throw;
 
         if (_recipient == address(rewardAccount) && _amount > rewards) throw;
 
@@ -287,11 +302,13 @@ contract DAO is DAOInterface, Token, TokenSale {
         // execute result
         if (quorum >= minQuorum(p.amount) && yea > nay) {
             if (!p.creator.send(p.proposalDeposit)) throw;
-            if (!p.recipient.call.value(p.amount)(_transactionBytecode)) throw;  // Without this throw, the creator of the proposal can repeat this, and get so much fund. //TODO need of specifiying gas?
+            // Without this throw, the creator of the proposal can repeat this, and get so much fund.
+            if (!p.recipient.call.value(p.amount)(_transactionBytecode)) throw;
             p.proposalPassed = true;
             _success = true;
             if (p.recipient == address(rewardAccount)) {
-                if (rewards < p.amount) throw; // This happens when multiple similar proposals are created and both are passed at the same time.
+                // This happens when multiple similar proposals are created and both are passed at the same time.
+                if (rewards < p.amount) throw;
                 rewards -= p.amount;
             }
             else {
@@ -300,11 +317,7 @@ contract DAO is DAOInterface, Token, TokenSale {
             }
         }
         else if (quorum >= minQuorum(p.amount) && nay >= yea) {
-            // p.proposalPassed = false; // That's the default.
             if (!p.creator.send(p.proposalDeposit)) throw;
-        }
-        else {
-            // p.proposalPassed = false; // That's the default.
         }
 
         // Since the voting deadline is over, there is no point in counting again.
@@ -336,7 +349,7 @@ contract DAO is DAOInterface, Token, TokenSale {
         }
 
         // move funds and assign new Tokens
-        uint fundsToBeMoved = (balances[msg.sender] * p.splitData[0].splitBalance) / p.splitData[0].totalSupply; // totalSupply represents the sum of unsplit tokens
+        uint fundsToBeMoved = (balances[msg.sender] * p.splitData[0].splitBalance) / p.splitData[0].totalSupply;
         if (p.splitData[0].newDAO.buyTokenProxy.value(fundsToBeMoved)(msg.sender) == false) throw;
 
 
@@ -356,7 +369,7 @@ contract DAO is DAOInterface, Token, TokenSale {
     function getMyReward() noEther external {
         // my share of the rewardToken of this DAO, or when called by a splitted child DAO, there portion of the rewardToken.
         uint myShareOfTheReward = (balanceOf(msg.sender) * rewardToken[address(this)]) / totalSupply + rewardToken[msg.sender];
-        uint myReward = (myShareOfTheReward * rewardAccount.accumulatedInput()) / totalRewardToken - payedOut[msg.sender]; // DANGER - 1024 stackdepth
+        uint myReward = (myShareOfTheReward * rewardAccount.accumulatedInput()) / totalRewardToken - payedOut[msg.sender];
         if (!rewardAccount.payOut(msg.sender, myReward)) throw;
         payedOut[msg.sender] += myReward;
     }
@@ -379,7 +392,7 @@ contract DAO is DAOInterface, Token, TokenSale {
 
 
     function transferPayedOut(address _from, address _to, uint256 _value) internal returns (bool success){
-        uint transferPayedOut = payedOut[_from] * _value / balanceOf(_from); // TODO Dangerous because of remainder, or negligable due to gas costs of the attack?
+        uint transferPayedOut = payedOut[_from] * _value / balanceOf(_from);
         if (transferPayedOut > payedOut[_from]) throw;
         payedOut[_from] -= transferPayedOut;
         payedOut[_to] += transferPayedOut;
@@ -414,12 +427,12 @@ contract DAO is DAOInterface, Token, TokenSale {
         if (_newServiceProvider)
             return 10 days;
         else
-            return 2 weeks + (_value * 31 days) / weiRaised;    // minimum of two weeks and maximum of one month and two weeks (depending on the value to be transferred)
+            return 2 weeks + (_value * 31 days) / weiRaised;    // minimum of two weeks and maximum of one month and two weeks
     }
 
 
     function minQuorum(uint _value) internal returns (uint _minQuorum) {
-        return totalSupply / 5 + _value / 3;     // minimum of 20% and maximum of 53.33% (depending on the value to be transferred)
+        return totalSupply / 5 + _value / 3;     // minimum of 20% and maximum of 53.33%
     }
 
 
@@ -428,9 +441,11 @@ contract DAO is DAOInterface, Token, TokenSale {
         return daoCreator.createDAO(_newServiceProvider, 0, now + 42 days);
     }
 
+
     function numberOfProposals() constant returns (uint _numberOfProposals) {
         return proposals.length;
     }
+
 
     function numberOfVotes(uint _proposalID) constant returns (uint _numberOfVotes) {
         return proposals[_proposalID].votes.length;
