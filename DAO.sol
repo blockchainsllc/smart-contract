@@ -38,7 +38,6 @@ contract DAOInterface {
 
     // contract variables and events
     Proposal[] public proposals;
-    uint public numProposals; // TODO needed?
 
     uint public rewards;
 
@@ -75,7 +74,6 @@ contract DAOInterface {
         bool openToVote;
         // True if the sufficient votes have been counted with the majority saying yes.
         bool proposalPassed;
-        uint numberOfVotes; // TODO is this needed?
         // A hash to check validity of a proposal. Equal to sha3(_recipient, _amount, _transactionBytecode)
         bytes32 proposalHash;
         // The deposit in wei the creator puts in the proposal. Is taken from the msg.value of a newProposal call.
@@ -96,7 +94,7 @@ contract DAOInterface {
     struct SplitData {
         // Is the balance of the current DAO minus the deposit at the time of split.
         uint splitBalance;
-        // Represents the total amount of token in existence at the time of split.
+        // Represents the total amount of tokens in existence at the time of split.
         uint totalSupply;
         // Amount of rewardToken owned by the DAO at the time of split.
         uint rewardToken;
@@ -237,14 +235,12 @@ contract DAO is DAOInterface, Token, TokenSale {
         p.votingDeadline = now + debatingPeriod(_newServiceProvider, _amount);
         p.openToVote = true;
         //p.proposalPassed = false; // that's default
-        //p.numberOfVotes = 0;
         p.newServiceProvider = _newServiceProvider;
         if (_newServiceProvider)
             p.splitData.length++;
         p.creator = msg.sender;
         p.proposalDeposit = msg.value;
         ProposalAdded(_proposalID, _recipient, _amount, _description);
-        numProposals = _proposalID + 1; //TODO test
     }
 
 
@@ -261,7 +257,6 @@ contract DAO is DAOInterface, Token, TokenSale {
         _voteID = p.votes.length++;
         p.votes[_voteID] = Vote({inSupport: _supportsProposal, voter: msg.sender});
         p.voted[msg.sender] = true;
-        p.numberOfVotes = _voteID + 1;
         Voted(_proposalID, _supportsProposal, msg.sender);
     }
 
@@ -431,6 +426,14 @@ contract DAO is DAOInterface, Token, TokenSale {
     function createNewDAO(address _newServiceProvider) internal returns (DAO _newDAO) {
         NewServiceProvider(_newServiceProvider);
         return daoCreator.createDAO(_newServiceProvider, 0, now + 42 days);
+    }
+
+    function numberOfProposals() constant returns (uint _numberOfProposals) {
+        return proposals.length;
+    }
+
+    function numberOfVotes(uint _proposalID) constant returns (uint _numberOfVotes) {
+        return proposals[_proposalID].votes.length;
     }
 }
 
