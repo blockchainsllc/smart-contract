@@ -174,6 +174,11 @@ contract DAOInterface {
     ///      funds which can be attributed to the sender to the new DAO. It will also burn the Tokens of the sender. (TODO: document rewardTokens)
     function confirmNewServiceProvider(uint _proposalID, address _newServiceProvider);
 
+    /// @notice Make the DAO repay a dormant account with the fair share of Ether balance and future rewards
+    /// @param _dormant The address of the account to be liquidated.  This account should not have participated in any votes or proposals for 6 months.
+    /// @return Whether the repay has been successful
+    function repayDormantAccount(address _dormant) returns (bool _success);
+
     /// @notice add new possible recipient `_recipient` for transactions from the DAO (through proposals)
     /// @param _recipient New recipient address
     /// @dev Can only be called by the current service provider
@@ -273,6 +278,7 @@ contract DAO is DAOInterface, Token, TokenSale {
         p.votes[_voteID] = Vote({inSupport: _supportsProposal, voter: msg.sender});
         p.voted[msg.sender] = true;
         Voted(_proposalID, _supportsProposal, msg.sender);
+        lastInteraction[msg.sender] = now;
     }
 
 
@@ -363,6 +369,27 @@ contract DAO is DAOInterface, Token, TokenSale {
         Transfer(msg.sender, 0, balances[msg.sender]);
         totalSupply -= balances[msg.sender];
         balances[msg.sender] = 0;
+        lastInteraction[msg.sender] = now;
+    }
+
+
+    // repay a dormant account with the fair share of Ether balance and future rewards
+    function repayDormantAccount(address _dormant) returns (bool _success) {
+        if (lastInteraction[_dormant] == 0 || lastInteraction[_dormant] + 6 * 31 days >= now) throw;
+
+        uint fundsToBeMoved = (balances[_dormant] * this.balance) / totalSupply;
+        if (!_dormant.send(fundsToBeMoved)) throw;
+
+        uint rewardTokenToBeMoved = (balances[_dormant] * rewardToken[address(this)]) / totalSupply;
+        rewardToken[_dormant] += rewardTokenToBeMoved;
+        if (rewardToken[address(this)] < rewardTokenToBeMoved) throw;  // should not happen.
+        rewardToken[address(this)] -= rewardTokenToBeMoved;
+
+        Transfer(_dormant, 0, balances[_dormant]);
+        totalSupply -= balances[_dormant];
+        balances[_dormant] = 0;
+
+        return true;
     }
 
 
@@ -372,11 +399,13 @@ contract DAO is DAOInterface, Token, TokenSale {
         uint myReward = (myShareOfTheReward * rewardAccount.accumulatedInput()) / totalRewardToken - payedOut[msg.sender];
         if (!rewardAccount.payOut(msg.sender, myReward)) throw;
         payedOut[msg.sender] += myReward;
+        lastInteraction[msg.sender] = now;
     }
 
 
     function transfer(address _to, uint256 _value) returns (bool success) {
         if (funded && now > closingTime && transferPayedOut(msg.sender, _to, _value) && super.transfer(_to, _value)){
+            if (lastInteraction[_to] == 0) lastInteraction[_to] = now;
             return true;
         }
         else throw;
@@ -385,6 +414,7 @@ contract DAO is DAOInterface, Token, TokenSale {
 
     function transferFrom(address _from, address _to, uint256 _value) returns (bool success) {
         if (funded && now > closingTime && transferPayedOut(_from, _to, _value) && super.transferFrom(_from, _to, _value)){
+            if (lastInteraction[_to] == 0) lastInteraction[_to] = now;
             return true;
         }
         else throw;

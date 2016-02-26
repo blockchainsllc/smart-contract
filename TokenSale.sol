@@ -40,6 +40,8 @@ contract TokenSaleInterface {
 
     mapping (address => uint256) weiGiven;     // total amount of wei given to the Token Sale (needed for refund)
 
+    mapping (address => uint256) lastInteraction;  // When was the address's last interaction with this contract
+
     /// @dev Constructor setting the minimal target and the end of the Token Sale
     /// @param _minValue Minimal value for a successful Token Sale
     /// @param _closingTime Date (in unix time) of the end of the Token Sale
@@ -75,6 +77,7 @@ contract TokenSale is TokenSaleInterface, Token {
             totalSupply += token;
             weiGiven[_tokenHolder] += msg.value;
             weiRaised += msg.value;
+            lastInteraction[_tokenHolder] = now;
             SoldToken(_tokenHolder, token, msg.value);
             if (weiRaised >= minValue && !funded) {
                 funded = true;
