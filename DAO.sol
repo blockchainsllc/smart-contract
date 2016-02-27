@@ -439,6 +439,7 @@ contract DAO is DAOInterface, Token, TokenSale {
 
     function halfMinQuorum() returns (bool _success){
         if (lastTimeMinQuorumMet < (now - 52 weeks)) {
+            lastTimeMinQuorumMet = now;
             minQuorumDivisor *= 2;
             return true;
         }
