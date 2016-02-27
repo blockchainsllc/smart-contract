@@ -144,6 +144,7 @@ contract DAOInterface {
     /// @param _amount The amount of wei to be sent with the proposed transaction
     /// @param _description A string describing the proposal
     /// @param _transactionBytecode The data of the proposed transaction
+    /// @param _debatingPeriod The time used for debating the proposal, at least 2 weeks.
     /// @param _newServiceProvider A bool defining whether this proposal is about a new service provider or not
     /// @return The proposal ID. Needed for voting on the proposal
     function newProposal(address _recipient, uint _amount, string _description, bytes _transactionBytecode, uint _debatingPeriod, bool _newServiceProvider) onlyShareholders returns (uint _proposalID);
@@ -238,7 +239,7 @@ contract DAO is DAOInterface, Token, TokenSale {
 
     function newProposal(address _recipient, uint _amount, string _description, bytes _transactionBytecode, uint _debatingPeriod, bool _newServiceProvider) onlyShareholders returns (uint _proposalID){
         // check sanity
-        if (_newServiceProvider && (_amount != 0 || _transactionBytecode.length != 0 || _recipient == serviceProvider || msg.value > 0)) {
+        if (_newServiceProvider && (_amount != 0 || _transactionBytecode.length != 0 || _recipient == serviceProvider || msg.value > 0 || _debatingPeriod < 1 weeks)) {
             throw;
         }
         else if (!_newServiceProvider && (!isRecipientAllowed(_recipient) || (_debatingPeriod < 2 weeks))) throw;
