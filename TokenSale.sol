@@ -36,9 +36,6 @@ contract TokenSaleInterface {
     uint public closingTime;                   // end of token sale
     uint public minValue;                      // minimal goal of token sale
     bool public funded;                        // true if project is funded, false otherwise
-    uint public weiRaised;                     // total amount of wei raised
-
-    mapping (address => uint256) weiGiven;     // total amount of wei given to the Token Sale (needed for refund)
 
     /// @dev Constructor setting the minimal target and the end of the Token Sale
     /// @param _minValue Minimal value for a successful Token Sale
@@ -52,11 +49,8 @@ contract TokenSaleInterface {
     /// @notice Refund `msg.sender` in the case of a not successful Token Sale
     function refund();
 
-    /// @return current price multiplier. A number between 10 and 5. Which when used gets divided by 10.
-	function tokenPriceMultiplier() constant returns(uint multiplier);
-
     event Funded(uint value);
-    event SoldToken(address indexed to, uint numToken, uint value);
+    event SoldToken(address indexed to, uint amount);
     event Refund(address indexed to, uint value);
 }
 
@@ -70,15 +64,13 @@ contract TokenSale is TokenSaleInterface, Token {
 
     function buyTokenProxy(address _tokenHolder) returns (bool success) {
         if (now < closingTime && msg.value > 0) {
-            uint token = (tokenPriceMultiplier() * msg.value) / 10;
+            uint token = msg.value;
             balances[_tokenHolder] += token;
             totalSupply += token;
-            weiGiven[_tokenHolder] += msg.value;
-            weiRaised += msg.value;
-            SoldToken(_tokenHolder, token, msg.value);
-            if (weiRaised >= minValue && !funded) {
+            SoldToken(_tokenHolder, token);
+            if (totalSupply >= minValue && !funded) {
                 funded = true;
-                Funded(weiRaised);
+                Funded(totalSupply);
             }
             return true;
         }
@@ -89,22 +81,11 @@ contract TokenSale is TokenSaleInterface, Token {
     function refund() noEther {
         if (now > closingTime
             && !funded
-            && msg.sender.send(weiGiven[msg.sender])) // execute refund
+            && msg.sender.send(balances[msg.sender])) // execute refund
         {
-            Refund(msg.sender, weiGiven[msg.sender]);
+            Refund(msg.sender, balances[msg.sender]);
             totalSupply -= balances[msg.sender];
             balances[msg.sender] = 0;
-            weiRaised -= weiGiven[msg.sender];
-            weiGiven[msg.sender] = 0;
         }
-    }
-
-
-    function tokenPriceMultiplier() constant returns(uint multiplier) {
-        if (now < closingTime - 2 weeks)
-            return 10;
-        else if (now < closingTime - 4 days)
-            return 5 + ((closingTime - now) / (1 days) - 4) / 2; // TODO Test!
-        else return 5;
     }
 }
