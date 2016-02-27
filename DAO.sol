@@ -40,12 +40,17 @@ contract DAOInterface {
 
     // proposals to spend ether of the DAO or choose a new service provider
     Proposal[] public proposals;
+    // the minimal quorum needed for a proposal to vote is calculated by totalSupply / minQuorumDivisor
+    uint minQuorumDivisor;
+    // the time of the last proposal which has met the minimal quorum
+    uint lastTimeMinQuorumMet;
+
 
     // to total amount of wei received as reward which has not been sent to the rewardAccount
     uint public rewards;
 
     // address of the service provider
-	address public serviceProvider;
+    address public serviceProvider;
     // list of addresses the DAO is allowed to send money to
     address[] public allowedRecipients;
 
@@ -210,6 +215,8 @@ contract DAO is DAOInterface, Token, TokenSale {
         daoCreator = _daoCreator;
         proposalDeposit = 20 ether;
         rewardAccount = new ManagedAccount(address(this));
+        lastTimeMinQuorumMet = now;
+		minQuorumDivisor = 5; // sets the minimal quorum to 20%
         if (address(rewardAccount) == 0) throw;
     }
 
@@ -306,6 +313,7 @@ contract DAO is DAOInterface, Token, TokenSale {
             if (!p.recipient.call.value(p.amount)(_transactionBytecode)) throw;
             p.proposalPassed = true;
             _success = true;
+            lastTimeMinQuorumMet = now;
             if (p.recipient == address(rewardAccount)) {
                 // This happens when multiple similar proposals are created and both are passed at the same time.
                 if (rewards < p.amount) throw;
@@ -432,7 +440,13 @@ contract DAO is DAOInterface, Token, TokenSale {
 
 
     function minQuorum(uint _value) internal returns (uint _minQuorum) {
-        return totalSupply / 5 + _value / 3;     // minimum of 20% and maximum of 53.33%
+        return totalSupply / minQuorumDivisor + _value / 3;     // minimum of 20% and maximum of 53.33%
+    }
+
+
+    function halfMinQuorum() returns (uint _success){
+        if (lastTimeMinQuorumMet < (now - 104 weeks))
+            minQuorumDivisor *= 2;
     }
 
 
