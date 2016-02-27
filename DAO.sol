@@ -146,7 +146,7 @@ contract DAOInterface {
     /// @param _transactionBytecode The data of the proposed transaction
     /// @param _newServiceProvider A bool defining whether this proposal is about a new service provider or not
     /// @return The proposal ID. Needed for voting on the proposal
-    function newProposal(address _recipient, uint _amount, string _description, bytes _transactionBytecode, bool _newServiceProvider) onlyShareholders returns (uint _proposalID);
+    function newProposal(address _recipient, uint _amount, string _description, bytes _transactionBytecode, uint _debatingPeriod, bool _newServiceProvider) onlyShareholders returns (uint _proposalID);
 
     /// @notice Check that the proposal with the ID `_proposalID` matches a transaction which sends `_amount` with data `_transactionBytecode` to `_recipient`
     /// @param _proposalID The proposal ID
@@ -236,12 +236,12 @@ contract DAO is DAOInterface, Token, TokenSale {
     }
 
 
-    function newProposal(address _recipient, uint _amount, string _description, bytes _transactionBytecode, bool _newServiceProvider) onlyShareholders returns (uint _proposalID) {
+    function newProposal(address _recipient, uint _amount, string _description, bytes _transactionBytecode, uint _debatingPeriod, bool _newServiceProvider) onlyShareholders returns (uint _proposalID){
         // check sanity
         if (_newServiceProvider && (_amount != 0 || _transactionBytecode.length != 0 || _recipient == serviceProvider || msg.value > 0)) {
             throw;
         }
-        else if (!_newServiceProvider && !isRecipientAllowed(_recipient)) throw;
+        else if (!_newServiceProvider && (!isRecipientAllowed(_recipient) || (_debatingPeriod < 2 weeks))) throw;
 
         if (!funded || now < closingTime || (msg.value < proposalDeposit && !_newServiceProvider)) throw;
 
@@ -253,7 +253,7 @@ contract DAO is DAOInterface, Token, TokenSale {
         p.amount = _amount;
         p.description = _description;
         p.proposalHash = sha3(_recipient, _amount, _transactionBytecode);
-        p.votingDeadline = now + debatingPeriod(_newServiceProvider, _amount);
+        p.votingDeadline = now + _debatingPeriod;
         p.openToVote = true;
         //p.proposalPassed = false; // that's default
         p.newServiceProvider = _newServiceProvider;
@@ -431,14 +431,6 @@ contract DAO is DAOInterface, Token, TokenSale {
     }
 
 
-    function debatingPeriod(bool _newServiceProvider, uint _value) internal returns (uint _debatingPeriod) {
-        if (_newServiceProvider)
-            return 10 days;
-        else
-            return 2 weeks + (_value * 31 days) / weiRaised;    // minimum of two weeks and maximum of one month and two weeks
-    }
-
-
     function minQuorum(uint _value) internal returns (uint _minQuorum) {
         return totalSupply / minQuorumDivisor + _value / 3;     // minimum of 20% and maximum of 53.33%
     }
@@ -448,8 +440,8 @@ contract DAO is DAOInterface, Token, TokenSale {
         if (lastTimeMinQuorumMet < (now - 52 weeks)) {
             minQuorumDivisor *= 2;
             return true;
-		}
-		else
+        }
+        else
             return false;
     }
 
