@@ -45,7 +45,6 @@ contract DAOInterface {
     // the time of the last proposal which has met the minimal quorum
     uint lastTimeMinQuorumMet;
 
-
     // to total amount of wei received as reward which has not been sent to the rewardAccount
     uint public rewards;
 
@@ -216,7 +215,7 @@ contract DAO is DAOInterface, Token, TokenSale {
         proposalDeposit = 20 ether;
         rewardAccount = new ManagedAccount(address(this));
         lastTimeMinQuorumMet = now;
-		minQuorumDivisor = 5; // sets the minimal quorum to 20%
+        minQuorumDivisor = 5; // sets the minimal quorum to 20%
         if (address(rewardAccount) == 0) throw;
     }
 
