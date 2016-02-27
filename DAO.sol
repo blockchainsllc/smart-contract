@@ -325,6 +325,7 @@ contract DAO is DAOInterface, Token, TokenSale {
         }
         else if (quorum >= minQuorum(p.amount) && nay >= yea) {
             if (!p.creator.send(p.proposalDeposit)) throw;
+            lastTimeMinQuorumMet = now;
         }
 
         // Since the voting deadline is over, there is no point in counting again.
