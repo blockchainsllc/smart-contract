@@ -177,12 +177,12 @@ contract DAOInterface {
     /// @param _newServiceProvider The new service provider of the new DAO
     /// @dev This function, when called for the first time for this proposal, will create a new DAO and send the portion of the remaining
     ///      funds which can be attributed to the sender to the new DAO. It will also burn the Tokens of the sender. (TODO: document rewardTokens)
-    function confirmNewServiceProvider(uint _proposalID, address _newServiceProvider);
+    function confirmNewServiceProvider(uint _proposalID, address _newServiceProvider) returns (bool _success);
 
     /// @notice add new possible recipient `_recipient` for transactions from the DAO (through proposals)
     /// @param _recipient New recipient address
     /// @dev Can only be called by the current service provider
-    function addAllowedAddress(address _recipient) external;
+    function addAllowedAddress(address _recipient) external returns (bool _success);
 
     /// @notice change the deposit needed to make a proposal to `_proposalDeposit`
     /// @param _proposalDeposit New proposal deposit
@@ -337,7 +337,7 @@ contract DAO is DAOInterface, Token, TokenSale {
     }
 
 
-    function confirmNewServiceProvider(uint _proposalID, address _newServiceProvider) noEther onlyShareholders {
+    function confirmNewServiceProvider(uint _proposalID, address _newServiceProvider) noEther onlyShareholders returns (bool _success) {
         Proposal p = proposals[_proposalID];
 
         // sanity check
@@ -372,6 +372,8 @@ contract DAO is DAOInterface, Token, TokenSale {
         Transfer(msg.sender, 0, balances[msg.sender]);
         totalSupply -= balances[msg.sender];
         balances[msg.sender] = 0;
+
+        return true;
     }
 
 
@@ -415,9 +417,10 @@ contract DAO is DAOInterface, Token, TokenSale {
     }
 
 
-    function addAllowedAddress(address _recipient) noEther external {
+    function addAllowedAddress(address _recipient) noEther external returns (bool _success) {
         if (msg.sender != serviceProvider) throw;
         allowedRecipients.push(_recipient);
+        return true;
     }
 
 
