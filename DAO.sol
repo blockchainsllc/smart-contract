@@ -74,7 +74,8 @@ contract DAOInterface {
     // A proposal with `newServiceProvider == false` represents a transaction issued by this DAO.
     // A proposal with `newServiceProvider == true` represents a DAO split proposal.
     struct Proposal {
-        // The address where the `amount` will go to if the proposal is accepted.
+        // The address where the `amount` will go to if the proposal is accepted
+        // (if `newServiceProvider` is true, the proposed service provider of the new DAO).
         address recipient;
         // The amount to transfer to `recipient` if the proposal is accepted.
         uint amount;
@@ -106,11 +107,11 @@ contract DAOInterface {
     struct SplitData {
         // Is the balance of the current DAO minus the deposit at the time of split.
         uint splitBalance;
-        // Represents the total amount of tokens in existence at the time of split.
+        // Represents the total amount of Tokens in existence at the time of split.
         uint totalSupply;
         // Amount of rewardToken owned by the DAO at the time of split.
         uint rewardToken;
-        // Used only in the case of a newServiceProvider proposal. Represents the new DAO contract.
+        // the new DAO contract created at the time of split.
         DAO newDAO;
     }
 
@@ -131,7 +132,7 @@ contract DAOInterface {
     /// @param _closingTime Date (in unix time) of the end of the DAO Token Sale
     //  function DAO(address _defaultServiceProvider, DAO_Creator _daoCreator, uint _minValue, uint _closingTime)
 
-    /// @notice Buy token with `msg.sender` as the beneficiary as long as the DAO Token Sale is not closed, otherwise call receiveDAOReward().
+    /// @notice Buy Token with `msg.sender` as the beneficiary as long as the DAO Token Sale is not closed, otherwise call receiveDAOReward().
     function () returns (bool success);
 
     /// @dev function used to receive rewards as the DAO
@@ -177,12 +178,12 @@ contract DAOInterface {
     /// @param _newServiceProvider The new service provider of the new DAO
     /// @dev This function, when called for the first time for this proposal, will create a new DAO and send the portion of the remaining
     ///      funds which can be attributed to the sender to the new DAO. It will also burn the Tokens of the sender. (TODO: document rewardTokens)
-    function confirmNewServiceProvider(uint _proposalID, address _newServiceProvider);
+    function confirmNewServiceProvider(uint _proposalID, address _newServiceProvider) returns (bool _success);
 
     /// @notice add new possible recipient `_recipient` for transactions from the DAO (through proposals)
     /// @param _recipient New recipient address
     /// @dev Can only be called by the current service provider
-    function addAllowedAddress(address _recipient) external;
+    function addAllowedAddress(address _recipient) external returns (bool _success);
 
     /// @notice change the deposit needed to make a proposal to `_proposalDeposit`
     /// @param _proposalDeposit New proposal deposit
@@ -337,7 +338,7 @@ contract DAO is DAOInterface, Token, TokenSale {
     }
 
 
-    function confirmNewServiceProvider(uint _proposalID, address _newServiceProvider) noEther onlyShareholders {
+    function confirmNewServiceProvider(uint _proposalID, address _newServiceProvider) noEther onlyShareholders returns (bool _success) {
         Proposal p = proposals[_proposalID];
 
         // sanity check
@@ -372,6 +373,8 @@ contract DAO is DAOInterface, Token, TokenSale {
         Transfer(msg.sender, 0, balances[msg.sender]);
         totalSupply -= balances[msg.sender];
         balances[msg.sender] = 0;
+
+        return true;
     }
 
 
@@ -415,9 +418,10 @@ contract DAO is DAOInterface, Token, TokenSale {
     }
 
 
-    function addAllowedAddress(address _recipient) noEther external {
+    function addAllowedAddress(address _recipient) noEther external returns (bool _success) {
         if (msg.sender != serviceProvider) throw;
         allowedRecipients.push(_recipient);
+        return true;
     }
 
 
@@ -439,6 +443,7 @@ contract DAO is DAOInterface, Token, TokenSale {
 
     function halfMinQuorum() returns (bool _success){
         if (lastTimeMinQuorumMet < (now - 52 weeks)) {
+            lastTimeMinQuorumMet = now;
             minQuorumDivisor *= 2;
             return true;
         }
