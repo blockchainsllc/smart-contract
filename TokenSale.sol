@@ -42,8 +42,8 @@ contract TokenSaleInterface {
     /// @param _closingTime Date (in unix time) of the end of the Token Sale
     //  function TokenSale(uint _minValue, uint _closingTime);
 
-    /// @notice buy token with `_tokenHolder` as the token holder.
-    /// @param _tokenHolder The address of the receiver of the tokens
+    /// @notice buy Token with `_tokenHolder` as the Token holder.
+    /// @param _tokenHolder The address of the receiver of the Tokens
     function buyTokenProxy(address _tokenHolder) returns (bool success);
 
     /// @notice Refund `msg.sender` in the case of a not successful Token Sale
