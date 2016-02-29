@@ -53,7 +53,7 @@ contract DAOInterface {
     // list of addresses the DAO is allowed to send money to
     address[] public allowedRecipients;
 
-    // only used for splits, give DAOs without a balance the privilige to access their share of the rewards
+    // only used for splits, give DAOs without a balance the privilege to access their share of the rewards
     // conceptually, rewardTokens represents a share of right to receive rewards that arise from the already spent fund.
     mapping (address => uint) public rewardToken;
     // sum of all rewardToken
