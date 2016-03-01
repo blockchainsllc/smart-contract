@@ -1,11 +1,12 @@
-Tests for some of the functaionality incorperated in the smart contract. 
+Tests for some of the functionality incorporated in the smart contracts.
 
 Start geth with 
-    geth --dev --mine --genesis genesis_block.json --datadir ./data  console 2>> out.log.geth
-The genesis file has ether assigned to the accounts in ./data/keystore this provides ether for testing.
-To unlock these accounts use "Write here a good, randomly generated, passphrase!" with the double quoates excluded. each script do this automatically.
+    `geth --dev --mine --genesis genesis_block.json --datadir ./data  console 2>> out.log.geth`
+The genesis file has ether assigned to the accounts in ./data/keystore. This provides ether for testing.
+To unlock these accounts use "Write here a good, randomly generated, passphrase!" with the double quoates excluded.
+Each script does this automatically.
 
-Functionality, each script requires the previous scripts to be run successfully first. 
+Each script requires the previous scripts to be run successfully first.
 
 deploy.js : Deploys the contract. Creates the dao object. inside geth run loadScript("deploy.js")
 fund.js: Finishes the crowd funding by purchasing all the tokens. inside geth run loadScript("fund.js")
