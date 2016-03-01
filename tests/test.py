@@ -104,11 +104,10 @@ console.log("mining contract, please wait");""")
 if __name__ == "__main__":
     p = argparse.ArgumentParser(description='DAO contracts test helper')
     p.add_argument(
-        'solidity',
-        nargs='?',
+        '--solc',
+        required=True,
         help='Full path to the solc binary'
     )
     args = p.parse_args()
-    dabi, dbin, cabi, cbin = compile_contracts(args.solidity)
+    dabi, dbin, cabi, cbin = compile_contracts(args.solc)
     create_deploy_js(dabi, dbin, cabi, cbin)
-
