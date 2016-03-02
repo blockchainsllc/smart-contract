@@ -27,10 +27,10 @@ OTHER DEALINGS IN THE SOFTWARE.
 For more information, please refer to <http://unlicense.org>
 
 
-Most, basic default, standardised Token contract. No "pre-mine". Tokens need to be created by a derived contract (e.g. TokenSale)
+The most basic, standardized Token contract. No "pre-mine". Tokens need to be created by a derived contract (e.g. TokenSale.sol)
 
 Original taken from https://github.com/ConsenSys/Tokens/blob/master/Token_Contracts/contracts/Standard_Token.sol
-which is based on standardised APIs: https://github.com/ethereum/wiki/wiki/Standardized_Contract_APIs
+which is itself based on the Ethereum standardized contract APIs: https://github.com/ethereum/wiki/wiki/Standardized_Contract_APIs
 */
 
 /// @title Standard Token Contract.
