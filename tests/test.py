@@ -8,7 +8,8 @@ import argparse
 import os
 import json
 import subprocess
-
+from datetime import datetime
+datetime.utcnow()
 
 def compile_contracts(solc):
     print("Compiling the DAO contract...")
@@ -29,35 +30,59 @@ def compile_contracts(solc):
     ])
     res = json.loads(data)
     contract = res["contracts"]["DAO"]
-    return contract["abi"], contract["bin"]
+    DAOCreator = res["contracts"]["DAO_Creator"]
+    return contract["abi"], contract["bin"], DAOCreator["abi"], DAOCreator["bin"]
 
-def create_deploy_js(abi, bin):
+def create_deploy_js(dabi, dbin, cabi, cbin):
     print("Rewritting deploy.js using the compiled contract...")
     f = open("deploy.js", "w")
     f.write(
-        """//geth --dev --genesis genesis_block.json --datadir ./data  console 2>> out.log.geth
+        """// geth --networkid 123 --nodiscover --maxpeers 0 --genesis ./genesis_block.json --datadir ./data console 2>> out.log.geth
 
-console.log("unlocking")
-personal.unlockAccount(web3.eth.accounts[0], "Write here a good, randomly generated, passphrase!")
-personal.unlockAccount(web3.eth.accounts[1], "Write here a good, randomly generated, passphrase!")
+console.log("unlocking accounts")
+personal.unlockAccount(web3.eth.accounts[0], "Write here a good, randomly generated, passphrase!");
+personal.unlockAccount(web3.eth.accounts[1], "Write here a good, randomly generated, passphrase!");
 
-console.log("setting service provider and daoCreator")
-var mined = 0;
-var _defaultServiceProvider = web3.eth.accounts[0]/* var of type address here */ ;
-var _daoCreator = web3.eth.accounts[1]/* var of type address here */ ;
-var daoContract = web3.eth.contract("""
-    )
-    f.write(abi)
-    f.write(
-        """);
-var dao = daoContract.new(
-        _defaultServiceProvider,
-        _daoCreator,
+function checkWork() {
+    if (eth.getBlock("pending").transactions.length > 0) {
+        if (eth.mining) return;
+        console.log("== Pending transactions! Mining...");
+        miner.start(1);
+    } else {
+        miner.stop(0);  // This param means nothing
+        console.log("== No transactions! Mining stopped.");
+    }
+}
+
+var daoContract = web3.eth.contract(""")
+    f.write(dabi)
+    f.write(""");
+
+console.log("Creating DAOCreator Contract");
+var creatorContract = web3.eth.contract(""")
+    f.write(cabi)
+    f.write(""");
+    var _daoCreatorContract = creatorContract.new({from: web3.eth.accounts[0], data: '""");
+    f.write(cbin)
+    f.write("""',
+gas: 3000000
+   }, function(e, contract){
+       if (e) {
+	console.log(e+" at DAOCreator creation!");
+       }
+       if (typeof contract.address != 'undefined') {
+           console.log('DAOCreator mined! address: ' + contract.address + ' transactionHash: ' + contract.transactionHash);
+           checkWork();
+           var _defaultServiceProvider = web3.eth.acounts[0]/* var of type address here */ ;
+           var dao = daoContract.new(
+               _defaultServiceProvider,
+               contract.address,
+               20,
+               1556842261,
         {
             from: web3.eth.accounts[0],
-            data: '"""
-    )
-    f.write(bin)
+            data: '""")
+    f.write(dbin)
     f.write(
         """',
             gas: 3000000,
@@ -65,23 +90,24 @@ var dao = daoContract.new(
    }, function(e, contract){
     console.log(e, contract);
     if (typeof contract.address != 'undefined') {
-         console.log('Contract mined! address: ' + contract.address + ' transactionHash: ' + contract.transactionHash);
-         mined = 1
+         console.log('DAO Contract mined! address: ' + contract.address + ' transactionHash: ' + contract.transactionHash);
     }
- })
-console.log("mining contract, please wait")
-miner.start(1); admin.sleepBlocks(1); miner.stop();"""
-    )
+ });
+        checkWork();
+       }
+   });
+checkWork();
+
+console.log("mining contract, please wait");""")
 
 
 if __name__ == "__main__":
     p = argparse.ArgumentParser(description='DAO contracts test helper')
     p.add_argument(
-        'solidity',
-        nargs='?',
+        '--solc',
+        required=True,
         help='Full path to the solc binary'
     )
     args = p.parse_args()
-    abi, bin = compile_contracts(args.solidity)
-    create_deploy_js(abi, bin)
-
+    dabi, dbin, cabi, cbin = compile_contracts(args.solc)
+    create_deploy_js(dabi, dbin, cabi, cbin)
