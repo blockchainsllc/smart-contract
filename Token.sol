@@ -1,5 +1,5 @@
 /*
-The user of this contract is fully responsible for compliance with 
+ The user of this contract is fully responsible for compliance with 
 present or future regulations of finance, communications and the 
 universal rights of digital beings.
 
