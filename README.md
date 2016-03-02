@@ -1,8 +1,8 @@
-## Intro
+# Slock.it smart contracts
 
-This repo contains the smart contracts that slock.it UG utilizes in the ethereum
-blockchain
+## What is it?
+The Ethereum solidity smart contracts for the Slock.it project
 
 ## Contact
-[slack](https://slockit.slack.com/)
+Please contact us on our [slack](https://slockit.slack.com/)
 
