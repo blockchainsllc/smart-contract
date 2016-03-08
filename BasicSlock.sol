@@ -19,9 +19,10 @@ along with the DAO.  If not, see <http://www.gnu.org/licenses/>.
 import "./SubUser.sol";
 //import "SlockDAO - deprecated";
 
-contract SlockitDAO {
+contract RewardCollector {
     function payOneTimeFee() returns(bool) {}
     function feeDivisor() constant returns(uint) {}
+    function payReward() {}
 }
 
 contract Slock is SubUser {
@@ -39,15 +40,18 @@ contract Slock is SubUser {
     
     bool public isFeeFree;
     
+    RewardCollector public rewardCollector;
+
     event Open();
     event Close();
     event Rent(address indexed _user);
     event Return();
 
-    function Slock(uint _deposit, uint _price, uint _timeBlock) SubUser() {
+    function Slock(uint _deposit, uint _price, uint _timeBlock, RewardCollector _rewardCollector) SubUser() {
         owner = msg.sender;
         deposit = _deposit;
         price = _price;
+        rewardCollector = _rewardCollector;
         
         if (_timeBlock == 0)
             timeBlock = 1;
@@ -78,7 +82,7 @@ contract Slock is SubUser {
         if (msg.sender != owner) throw;
         _
     }
-	
+
 
     modifier onlyUsers()
     {
@@ -109,8 +113,7 @@ contract Slock is SubUser {
     }
     
     function payOneTimeFee() {
-        address SlockitAddress = 0xaabbccddeeff0011223344556677889900aabbcc; // TODO replace by the Slock.it Gmbh - DAO contract address
-        if (SlockitDAO(SlockitAddress).payOneTimeFee.value(msg.value)())
+        if (rewardCollector.payOneTimeFee.value(msg.value)())
             isFeeFree = true;
         else
             throw;
@@ -150,9 +153,8 @@ contract Slock is SubUser {
         if (isFeeFree)
             owner.send(cost);
         else {
-            address dao = 0xff; //to be replaced by the DAO address
-            uint divisor = SlockitDAO(dao).feeDivisor();
-            dao.send(cost / divisor);
+            uint divisor = rewardCollector.feeDivisor();
+            rewardCollector.payReward.value(cost / divisor)();
             owner.send(cost - cost / divisor ); 
         }
         
@@ -168,9 +170,8 @@ contract Slock is SubUser {
             if (isFeeFree)
                 owner.send(deposit);
             else {
-                address dao = 0xff; //to be replaced by the DAO address
-                uint divisor = SlockitDAO(dao).feeDivisor();
-                dao.send(deposit / divisor);
+                uint divisor = rewardCollector.feeDivisor();
+                rewardCollector.payReward.value(deposit / divisor)();
                 owner.send(deposit - deposit / divisor );
             }
             user = owner;
