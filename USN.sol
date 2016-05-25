@@ -17,27 +17,24 @@ along with the DAO.  If not, see <http://www.gnu.org/licenses/>.
 
 
 /*
-  Sample Proposal from a Contractor to the DAO including a reward towards the
-  DAO.
-
-  Feel free to use as a template for your own proposal.
+  Slockit's USN Proposal
 */
 
-import "./Proposal2.sol";
+import "./DAOSecurity.sol";
 
-contract SampleOffer is SampleOfferWithoutReward {
+contract USN is DAOSecurity {
 
     uint public rewardDivisor;
     uint public deploymentReward;
 
-        function SampleOffer(
+        function USN(
             address _contractor,
             address _client,
             bytes32 _IPFSHashOfTheProposalDocument,
             uint _totalCosts,
             uint _oneTimeCosts,
             uint128 _minDailyWithdrawLimit
-        ) SampleOfferWithoutReward(
+        ) DAOSecurity(
             _contractor,
             _client,
             _IPFSHashOfTheProposalDocument,

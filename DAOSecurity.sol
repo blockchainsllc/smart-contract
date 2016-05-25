@@ -17,27 +17,18 @@ along with the DAO.  If not, see <http://www.gnu.org/licenses/>.
 
 
 /*
-  An Offer from a Contractor to the DAO without any reward going back to
-  the DAO.
-
-  Feel free to use as a template for your own proposal.
-
-  Actors:
-  - Offerer:    the entity that creates the Offer. Usually it is the initial
-                Contractor.
-  - Contractor: the entity that has rights to withdraw money to perform
-                its project.
-  - Client:     the DAO that gives money to the Contractor. It signs off
-                the Offer, can adjust daily withdraw limit or even fire the
-                Contractor.
+  Slockit's DAOSecurity proposal
 */
 
-// TODO: Would need to either move the DAO contracts in this repo too, or
 // use this http://solidity.readthedocs.io/en/latest/layout-of-source-files.html#use-in-actual-compilers
-// solidity feature in order to point to their location
-import "./DAO.sol";
+// solidity feature in order to point to the DAO's location when compiling with
+// the command line solc compiler.
+//
+// example:
+// solc DAO=/home/lefteris/ew/DAO DAOSecurity.sol
+import "DAO/DAO.sol";
 
-contract SampleOfferWithoutReward {
+contract DAOSecurity {
 
     // The total cost of the Offer. Exactly this amount is transfered from the
     // Client to the Offer contract when the Offer is signed by the Client.
@@ -81,7 +72,7 @@ contract SampleOfferWithoutReward {
     // Prevents methods from perfoming any value transfer
     modifier noEther() {if (msg.value > 0) throw; _}
 
-    function SampleOfferWithoutReward(
+    function DAOSecurity(
         address _contractor,
         address _client,
         bytes32 _IPFSHashOfTheProposalDocument,
