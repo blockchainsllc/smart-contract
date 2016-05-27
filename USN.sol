@@ -24,53 +24,39 @@ import "./DAOSecurity.sol";
 
 contract USN is DAOSecurity {
 
-    uint public rewardDivisor;
-    uint public deploymentReward;
+    uint rewardDivisor;
+    uint deploymentReward;
 
-        function USN(
-            address _contractor,
-            address _client,
-            bytes32 _IPFSHashOfTheProposalDocument,
-            uint _totalCosts,
-            uint _oneTimeCosts,
-            uint128 _minDailyWithdrawLimit
-        ) DAOSecurity(
-            _contractor,
-            _client,
-            _IPFSHashOfTheProposalDocument,
-            _totalCosts,
-            _oneTimeCosts,
-            _minDailyWithdrawLimit) {
-        }
-
-    // interface for Ethereum Computer
-    function payOneTimeReward() returns(bool) {
-        // client DAO should not be able to pay itself generating
-        // "free" reward tokens
-        if (msg.sender == address(client) || msg.sender == address(originalClient))
-            throw;
-
-        if (msg.value < deploymentReward)
-            throw;
-
-        if (originalClient.DAOrewardAccount().call.value(msg.value)()) {
-            return true;
-        } else {
-            throw;
-        }
+    function USN(
+        address _contractor,
+        address _client,
+        bytes32 _hashOfTheProposalDocument,
+        uint _totalCosts,
+        uint _oneTimeCosts,
+        uint128 _minDailyWithdrawLimit
+    ) DAOSecurity(
+        _contractor,
+        _client,
+        _hashOfTheProposalDocument,
+        _totalCosts,
+        _oneTimeCosts,
+        _minDailyWithdrawLimit) {
     }
 
-    // pay reward
-    function payReward() returns(bool) {
-        // client DAO should not be able to pay itself generating
-        // "free" reward tokens
-        if (msg.sender == address(client) || msg.sender == address(originalClient))
-            throw;
+    function setRewardDivisor(uint _rewardDivisor) onlyClient noEther {
+        rewardDivisor = _rewardDivisor;
+    }
 
-        if (originalClient.DAOrewardAccount().call.value(msg.value)()) {
-            return true;
-        } else {
-            throw;
-        }
+    function setDeploymentReward(uint _deploymentReward) onlyClient noEther {
+        deploymentReward = _deploymentReward;
+    }
+
+    // non-value-transfer getters
+    function getRewardDivisor() noEther constant returns (uint) {
+        return rewardDivisor;
+    }
+
+    function getDeploymentReward() noEther constant returns (uint) {
+        return deploymentReward;
     }
 }
